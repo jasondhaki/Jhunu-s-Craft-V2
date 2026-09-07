@@ -8,6 +8,13 @@
 //
 // CURRENCY: BDT and USD prices are separate, manually-set fields. Never
 // derived from each other at runtime (§8.4, §28).
+//
+// BILINGUAL: every `*Bn` field is OPTIONAL on purpose. §22 forbids
+// machine-translated Bangla — it "undermines the handmade authenticity" — so
+// content is authored in English first and a human adds the Bangla later. A
+// product must be publishable before its Bangla copy exists. The storefront
+// falls back to English when a Bangla field is null (see src/lib/i18n.ts).
+// Do not make these required.
 
 generator client {
   provider = "prisma-client-js"
@@ -75,14 +82,14 @@ model Product {
   slug String @unique // URL-safe; never change without a 301 (§17.1)
 
   nameEn String @map("name_en")
-  nameBn String @map("name_bn")
+  nameBn String? @map("name_bn")
 
   // 1–2 lines, used in cards and meta descriptions
   shortDescriptionEn String @map("short_description_en")
-  shortDescriptionBn String @map("short_description_bn")
+  shortDescriptionBn String? @map("short_description_bn")
 
   descriptionEn String @map("description_en") @db.Text
-  descriptionBn String @map("description_bn") @db.Text
+  descriptionBn String? @map("description_bn") @db.Text
 
   material Material
   bagType  BagType   @map("bag_type")
@@ -109,13 +116,13 @@ model Product {
   weightGrams Int @map("weight_grams")
 
   capacityNoteEn String @map("capacity_note_en") // "Fits a 13\" laptop, A4 documents"
-  capacityNoteBn String @map("capacity_note_bn")
+  capacityNoteBn String? @map("capacity_note_bn")
 
   materialsDetailEn String @map("materials_detail_en") @db.Text
-  materialsDetailBn String @map("materials_detail_bn") @db.Text
+  materialsDetailBn String? @map("materials_detail_bn") @db.Text
 
   careInstructionsEn String @map("care_instructions_en") @db.Text
-  careInstructionsBn String @map("care_instructions_bn") @db.Text
+  careInstructionsBn String? @map("care_instructions_bn") @db.Text
 
   madeToOrder    Boolean @default(false) @map("made_to_order")
   productionDays Int?    @map("production_days") // if made to order
@@ -161,7 +168,7 @@ model Variant {
   sku String @unique // §4.7 — [MAT]-[TYPE]-[COLOR]-[NNN]
 
   colorNameEn String  @map("color_name_en")
-  colorNameBn String  @map("color_name_bn")
+  colorNameBn String?  @map("color_name_bn")
   colorHex    String  @map("color_hex")
   sizeLabel   String? @map("size_label")
 
@@ -219,7 +226,7 @@ model ProductImage {
 
   // REQUIRED — not optional (§5.3, §20)
   altTextEn String @map("alt_text_en")
-  altTextBn String @map("alt_text_bn")
+  altTextBn String? @map("alt_text_bn")
 
   position Int       @default(0)
   type     ImageType @default(PRODUCT)
@@ -239,10 +246,10 @@ model Collection {
   slug String @unique
 
   titleEn String @map("title_en")
-  titleBn String @map("title_bn")
+  titleBn String? @map("title_bn")
   // Collections are strong SEO landing pages — they need real intro copy (§4.5)
   introEn String @map("intro_en") @db.Text
-  introBn String @map("intro_bn") @db.Text
+  introBn String? @map("intro_bn") @db.Text
 
   heroImageUrl String? @map("hero_image_url")
   heroImageAlt String? @map("hero_image_alt")
@@ -276,7 +283,7 @@ model Tag {
   id      String @id @default(cuid())
   slug    String @unique
   labelEn String @map("label_en")
-  labelBn String @map("label_bn")
+  labelBn String? @map("label_bn")
 
   products ProductTag[]
 
@@ -844,9 +851,9 @@ model Page {
   slug String @unique
 
   titleEn String @map("title_en")
-  titleBn String @map("title_bn")
+  titleBn String? @map("title_bn")
   bodyEn  String @map("body_en") @db.Text
-  bodyBn  String @map("body_bn") @db.Text
+  bodyBn  String? @map("body_bn") @db.Text
 
   metaTitle       String? @map("meta_title")
   metaDescription String? @map("meta_description")
@@ -946,7 +953,7 @@ model ShippingZone {
   code String @unique // "BD_DHAKA", "BD_OUTSIDE", "INTL_EU"
 
   nameEn String @map("name_en")
-  nameBn String @map("name_bn")
+  nameBn String? @map("name_bn")
 
   // ISO country codes; for BD zones, the districts the zone covers
   countries String[]
@@ -966,7 +973,7 @@ model ShippingRate {
   zone   ShippingZone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
 
   nameEn String @map("name_en")
-  nameBn String @map("name_bn")
+  nameBn String? @map("name_bn")
 
   // Weight band in grams; rates are per band per zone (§9.2)
   minWeightGrams Int  @default(0) @map("min_weight_grams")

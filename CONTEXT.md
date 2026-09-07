@@ -86,6 +86,29 @@ No Postgres instance yet. Building the full Prisma schema (§5) plus a realistic
 
 Never mixed within one page. Implemented in `formatMoney` in `src/lib/money.ts` — the single place a money value becomes a string.
 
+### D6 — Bangla content fields are nullable, with English fallback
+**Date:** 2026-09-08 · **Status:** locked · **Plan §22**
+
+The schema originally made every `*Bn` column required. That would have forced machine-translated Bangla into the seed data on day one — precisely what §22 forbids ("it undermines the handmade authenticity").
+
+All 15 `*Bn` columns are now optional. Content is authored in English first; a human adds Bangla later. `src/lib/i18n.ts` falls back to English when a Bangla field is null, and sets `lang="en"` on that element so a screen reader switches voice correctly.
+
+Consequence: the storefront must always tolerate a half-translated catalog. That is the normal state, not an error state.
+
+### D7 — Storefront pages render dynamically, not edge-cached (revisit in Phase 5)
+**Date:** 2026-09-08 · **Status:** accepted, revisit · **Plan §8.4 vs §19**
+
+§8.4 requires currency to be detected per visitor (IP → country → BDT/USD) with an overridable cookie. §19 wants category and product pages edge-cached.
+
+These conflict: reading cookies or headers forces per-request rendering, so every storefront route currently builds as `ƒ` (server-rendered on demand) rather than a cached static page.
+
+Accepted for now because correct pricing beats cache hit rate, and the pages are cheap. **Not the final answer.** Phase 5 options, in rough order of preference:
+1. Render the page currency-agnostic and swap prices in a small client island, so the HTML caches.
+2. Set the currency cookie in middleware and cache per cookie value (two variants per page).
+3. Serve separate `/bd` and `/intl` URL prefixes and cache each.
+
+Left as-is rather than guessed at, because the right choice depends on real traffic mix, which we do not have yet.
+
 ---
 
 ## 3. Action log
@@ -128,6 +151,25 @@ Newest last. Every action Claude takes on this project is recorded here.
 | 30 | Fixed canonical URL resolution | `metadataBase` would have fallen back to `localhost` in production. Now resolves `NEXT_PUBLIC_SITE_URL` → `VERCEL_PROJECT_PRODUCTION_URL` → localhost. Deliberately **not** `VERCEL_URL`, which is per-deployment and would emit a different canonical URL on every push (§17.1). |
 | 31 | Deployed to production | **https://jhunus-crafts.vercel.app** — HTTP 200, served from `bom1` (Mumbai), which gives the South Asian point of presence §19 asks for. Verified brand name, hero, maker name, phone, address, skip link, and palette token all present in the served HTML. |
 
+### 2026-09-08 — Session 1, Phase 1 (catalog)
+
+| # | Action | Detail |
+|---|---|---|
+| 32 | Made Bangla fields nullable | 15 `*Bn` columns → optional, with a schema comment explaining why so nobody "fixes" it back. Migration `20260907212150_bangla_fields_optional`. See D6. |
+| 33 | Wrote `src/lib/i18n.ts` | English fallback for missing Bangla, plus `langAttr()` so an untranslated string gets `lang="en"` and a screen reader switches voice (§20). Removed a `defaultCurrencyFor` stub that returned the same value on both branches — currency follows region, not language (§8.4). |
+| 34 | Created an honest photo placeholder | `public/photo-pending.svg` — a brand-coloured diagram that reads unmistakably as a missing photo. §28 forbids stock imagery, so no fake product shots anywhere. |
+| 35 | Wrote the seed | 24 products / 41 variants / 144 images / 7 shipping zones / 4 collections / 5 tags. Idempotent (upserts on slug/sku/code). USD prices set by hand next to BDT, never converted (§8.4). Every product carries a real `weight_grams` (§9.2). |
+| 36 | Hit a stale-client error | Seed failed with "Argument `nameBn` is missing" — `prisma migrate dev` had not regenerated the client. `prisma generate` fixed it. Worth remembering after any schema edit. |
+| 37 | Wrote `src/lib/currency.ts` | Country → currency via Vercel's `x-vercel-ip-country`, overridable by cookie, one-year persistence (§8.4). Nothing converts between currencies; it only picks which stored column to read. |
+| 38 | Wrote `src/lib/catalog.ts` | All storefront queries in one place, so the "only ACTIVE and published" rule cannot be forgotten on a new page. Facet counts, filters, sorting, related products. Price filtering is applied to the active currency's own column — never a converted value. |
+| 39 | Built the catalog UI | Product card (§6.2, hover image, real stock badges), grid (2 cols mobile per §6.2), filters and sort. Filters are **plain links, not a client form** — they work with JS disabled, every filter state is a crawlable URL, and there is no hydration cost on slow connections (§19). |
+| 40 | Restructured into `(storefront)` | Route group with a shared header/main/footer layout, matching the §12.3 structure. Admin will deliberately not share it. |
+| 41 | Built `/shop` and `/shop/[category]` | jute · leather · mixed · new · bestsellers, each with real 150–300 word intro copy per §17.3, not just a grid. |
+| 42 | Built the PDP (§6.3) | Gallery, purchase panel, trust row, all five accordions including the natural-variation paragraph §6.3.12 says prevents returns, maker credit, related products, `Product` + `Offer` JSON-LD. |
+| 43 | Wrote the cart store | Zustand + localStorage per §6.4. Stores **only** variant ids and quantities — no prices or names. A localStorage cart is attacker-controlled, so anything that decides what the customer pays is resolved server-side (§13.4). |
+| 44 | Handled a security-hook flag | The `dangerouslySetInnerHTML` used for JSON-LD was flagged twice. Kept it (React cannot render script content otherwise) but corrected my own inaccurate comment: admin-entered product names **do** reach it. Documented why `JSON.stringify` + escaping `<` is the correct mitigation for a JSON sink, and why an HTML sanitiser would be the wrong tool. |
+| 45 | Recorded a caching tradeoff | Every storefront route builds as `ƒ` because currency detection reads cookies/headers, which conflicts with §19's edge-caching goal. Accepted and documented as D7 with three Phase 5 options, rather than silently shipping a performance regression. |
+
 ---
 
 ## 4. Build progress against §27
@@ -135,7 +177,7 @@ Newest last. Every action Claude takes on this project is recorded here.
 | Phase | Scope | Status |
 |---|---|---|
 | **0 — Foundations** | Repo, tooling, design tokens, component skeleton, DB schema, staging | **Mostly done** — repo, tooling, tokens, schema, money/config libs, header/footer/homepage all built and building clean. Remaining: staging environment, and the rest of the §2.9 primitives. |
-| **1 — Catalog** | Product model, admin CRUD, image pipeline, home, category, PDP, search, filters | Next |
+| **1 — Catalog** | Product model, admin CRUD, image pipeline, home, category, PDP, search, filters | **Storefront done** — seed catalog, home, /shop, categories, PDP, filters, sort, pagination. Remaining: admin CRUD, image upload pipeline, search. |
 | **2 — Commerce** | Cart, guest checkout, COD, order creation, confirmation email, admin orders | Not started |
 | **3 — Payments & accounts** | Gateway + webhooks, accounts, order history, guest tracking, wishlist, emails | Not started |
 | **4 — Trust & content** | Reviews, content + policy pages, FAQ, SEO, structured data, analytics | Not started |

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="800" height="800" role="img" aria-label="Product photograph pending">
+  <!--
+    Deliberate placeholder for seed data.
+
+    Plan §28: stock photos or borrowed images are "instantly detectable,
+    instantly fatal to trust". So this is not a stylised fake product shot —
+    it reads unmistakably as a missing photo, in the brand palette, and is
+    replaced when real photography arrives (CONTEXT.md Q6).
+  -->
+  <rect width="800" height="800" fill="#F2EEE4"/>
+  <rect x="20" y="20" width="760" height="760" fill="none" stroke="#C9C0AA" stroke-width="2" stroke-dasharray="12 10"/>
+  <g fill="none" stroke="#B87333" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" opacity="0.55">
+    <!-- a simple bag outline, clearly a diagram rather than a photograph -->
+    <path d="M270 350 h260 l26 250 h-312 z"/>
+    <path d="M330 350 v-42 a70 70 0 0 1 140 0 v42"/>
+  </g>
+  <text x="400" y="672" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="30" fill="#6B6455">Photograph pending</text>
+  <text x="400" y="712" text-anchor="middle" font-family="system-ui, sans-serif" font-size="21" fill="#8A8272">Sample catalogue item</text>
+</svg>
