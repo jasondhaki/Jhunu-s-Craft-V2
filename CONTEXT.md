@@ -10,7 +10,9 @@
 
 An ecommerce site for **Jhunu's Crafts** — a one-maker family workshop in Bangladesh producing handmade jute and leather bags (women's side bags, handbags, shopping bags, totes).
 
-- **Repo:** https://github.com/jasondhaki/Jhunu-s-Craft-V2
+- **Repo:** https://github.com/jasondhaki/Jhunu-s-Craft-V2 (auto-deploys on push to `main`)
+- **Live:** https://jhunus-crafts.vercel.app
+- **Database:** Neon Postgres 18.6, `ap-southeast-1`. ⚠ The password was shared in chat — rotate before launch (Q9).
 - **Spec:** `ecommerce-master-plan.md` — 28 sections, treated as the source of truth. Section numbers are cited throughout this file as `§n`.
 - **Hosting:** Vercel (temporary, per the owner's instruction).
 - **Markets:** Bangladesh (primary — BDT, COD-heavy) + international (secondary — USD, card, courier).
@@ -115,7 +117,16 @@ Newest last. Every action Claude takes on this project is recorded here.
 | 19 | Built layout, header, footer, homepage | Fonts self-hosted via next/font, which satisfies §2.4's no-hotlinking rule. Header §3.2, footer §3.3, homepage §6.1 in the specified section order. No carousel (§6.1, §28). No stock photography — marked photo slots instead (§28). |
 | 20 | Handled lucide's dropped brand icons | lucide-react no longer ships Facebook/Instagram icons (they are trademarks, not generic glyphs). Added `src/components/ui/social-icons.tsx` with inline CC0 Simple Icons paths plus a §16.2 note on trademark vs artwork licensing. |
 | 21 | Verified the toolchain | `tsc --noEmit` clean · `eslint` clean · `next build` succeeds (compiled in 16.1s, 2 static routes). |
-| 22 | Added scripts + README | `npm run check` (typecheck + lint + build) as the pre-push gate; `vercel-build` runs generate → migrate deploy → build. README rewritten from the create-next-app default. |
+| 22 | Added scripts + README | `npm run check` (typecheck + lint + build) as the pre-push gate. README rewritten from the create-next-app default. |
+| 23 | First commit + push | 2 commits to `main` on GitHub. Verified `.env` was not staged before committing. |
+| 24 | Fixed the deploy blocker | `vercel-build` was `prisma generate && prisma migrate deploy && next build`, which would fail on the first deploy — no database, no migrations. Reduced to `prisma generate && next build`; kept the full command as `vercel-build:with-db` for once Neon existed. |
+| 25 | Owner supplied real details | Maker name, phone, address, Neon URL. Answered Q1, Q3, Q9; raised Q11–Q13 for the things that must not be guessed. |
+| 26 | Wired the database | Derived Neon's direct (unpooled) host from the pooled one, tested **both** connections before trusting either — Postgres 18.6, both OK. Pointed `prisma.config.ts` at the direct URL for migrations and left the app on the pooled one. |
+| 27 | Applied the initial migration | `20260907205001_init` → 31 tables live on Neon. Versioned migration rather than `db push`, per §24 ("versioned, forward-only"). |
+| 28 | Vercel login + link | Signed in via device flow. `vercel link` also auto-connected the GitHub repo, so pushes to `main` now deploy automatically. |
+| 29 | Set Vercel env vars | `DATABASE_URL`, `DIRECT_DATABASE_URL`, `SESSION_SECRET` (freshly generated 32 random bytes, not the dev placeholder) across production/preview/development — 9 variables. |
+| 30 | Fixed canonical URL resolution | `metadataBase` would have fallen back to `localhost` in production. Now resolves `NEXT_PUBLIC_SITE_URL` → `VERCEL_PROJECT_PRODUCTION_URL` → localhost. Deliberately **not** `VERCEL_URL`, which is per-deployment and would emit a different canonical URL on every push (§17.1). |
+| 31 | Deployed to production | **https://jhunus-crafts.vercel.app** — HTTP 200, served from `bom1` (Mumbai), which gives the South Asian point of presence §19 asks for. Verified brand name, hero, maker name, phone, address, skip link, and palette token all present in the served HTML. |
 
 ---
 
@@ -140,16 +151,19 @@ Blocking items are marked. Unblocked ones are being built around with clearly-ma
 
 | # | Question | Why it matters | Blocking? |
 |---|---|---|---|
-| Q1 | **The maker's name** (the father) | §1.3 positioning line, PDP maker credit (§6.3.13), About page (§6.8), every "made by hand by ___" string. Currently `[MAKER_NAME]`. | Not yet — blocks content pages (Phase 4) |
+| ~~Q1~~ | ~~The maker's name~~ | **ANSWERED 2026-09-08: James Dilip Dhaki.** Wired into `site-config.ts`. | — |
 | Q2 | **Brand name spelling** — logo says "Jhunu's Craft**s**", repo says "Jhunu-s-Craft-V2" | Affects title tags, `Organization` schema, footer copyright, emails. Using **"Jhunu's Crafts"** (matching the logo) until told otherwise. | No |
-| Q3 | **Phone number, WhatsApp number, physical address** | §14.1 — "nothing signals *real business* harder". Footer + contact + §17.2 `LocalBusiness` schema. §28 lists "no phone number" as a fatal trust error in Bangladesh. | No — blocks launch |
-| Q4 | **Domain name** | §24. Needed for SPF/DKIM/DMARC, canonical URLs, `orders@` sender. | No — blocks deployment beyond the `.vercel.app` URL |
-| Q5 | **Social links** (Facebook, Instagram, WhatsApp) | Footer, `sameAs` in `Organization` schema. §14.1: a dead social link is worse than none. | No |
-| Q6 | **Real product photos** | §21 — "will make or break this site more than any code decision". §28: stock photos are instantly fatal to trust. Seed data uses obvious placeholders. | No — blocks launch |
+| ~~Q3~~ | ~~Phone and address~~ | **ANSWERED 2026-09-08:** +880 1730 431932 · Monipuripara, Tejgaon, Dhaka - 1215. WhatsApp split out to Q12. | — |
+| Q4 | **Domain name** | §24. Needed for SPF/DKIM/DMARC, canonical URLs, `orders@` sender. Live on `jhunus-crafts.vercel.app` meanwhile. | No — blocks email deliverability |
+| Q5 | **Social links** (Facebook, Instagram, Pinterest) | Footer, `sameAs` in `Organization` schema. §14.1: a dead social link is worse than none, so unfilled entries render nothing. | No |
+| Q6 | **Real product photos** | §21 — "will make or break this site more than any code decision". §28: stock photos are instantly fatal to trust. Photo slots are marked placeholders, never stock imagery. | No — blocks launch |
 | Q7 | **Payment gateway account** — SSLCommerz / aamarPay / ShurjoPay? | §8.1. Determines the first `PaymentProvider` adapter. COD works without it. | No — blocks Phase 3 |
 | Q8 | **International payment acceptance** — unresolved in §8.2 | Plan flags this as the one thing that could change the plan structurally. Stripe/PayPal do not support BD merchants. Needs confirmation with the owner's bank + gateway. | No — blocks international sales only |
-| Q9 | **Neon `DATABASE_URL`** | Per D4. | No — blocks deployment |
+| ~~Q9~~ | ~~Neon `DATABASE_URL`~~ | **ANSWERED 2026-09-08.** Neon `ap-southeast-1`, Postgres 18.6. Migration applied, 31 tables live. ⚠ The password was shared in chat — rotate it in the Neon console before launch. | — |
 | Q10 | **Bangla copy** | §22 forbids machine translation — it "undermines the handmade authenticity". Bangla fields exist in the schema but must be written by a human. | No — blocks bilingual launch |
+| Q11 | **How James Dilip Dhaki writes his name in Bangla** | PDP maker credit and About page in the Bangla locale. A person's own spelling is theirs to choose — transliterating it automatically is exactly the §22 failure mode. Currently `[MAKER_NAME_BN]`. | No — blocks bilingual launch |
+| Q12 | **WhatsApp number** — same as the phone, or different? | §14.1 wants a click-to-chat button. A `wa.me` link to a number not registered on WhatsApp is a broken trust signal, worse than no button — so it is not rendered until confirmed. | No |
+| Q13 | **How long he has been making bags** | §1.4 wants specificity over superlative — "he's been making bags for 22 years" beats "years of experience". Used on the homepage maker strip and About page. | No |
 
 ---
 
