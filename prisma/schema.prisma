@@ -896,6 +896,7 @@ model AdminUser {
   createdAt DateTime @default(now()) @map("created_at")
 
   auditLogs AuditLog[]
+  sessions  AdminSession[]
 
   @@map("admin_users")
 }
@@ -996,4 +997,32 @@ model ShippingRate {
 
   @@index([zoneId])
   @@map("shipping_rates")
+}
+
+// Admin sessions are a separate table from customer sessions on purpose: an
+// admin session is a far more valuable credential, gets a shorter lifetime,
+// and must never be satisfiable by a customer session row (§13.3).
+model AdminSession {
+  id          String    @id @default(cuid())
+  adminUserId String    @map("admin_user_id")
+  adminUser   AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  // The raw token exists only in an httpOnly cookie; this is its SHA-256.
+  // A database leak therefore does not hand over live sessions (§13.2).
+  tokenHash String   @unique @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+
+  // Set once TOTP is verified. Until then the session may only reach the
+  // 2FA challenge, never the panel (§13.2 — 2FA mandatory on admin).
+  totpVerifiedAt DateTime? @map("totp_verified_at")
+
+  ipAddress String? @map("ip_address")
+  userAgent String? @map("user_agent")
+
+  createdAt      DateTime @default(now()) @map("created_at")
+  lastSeenAt     DateTime @default(now()) @map("last_seen_at")
+
+  @@index([adminUserId])
+  @@index([expiresAt])
+  @@map("admin_sessions")
 }
