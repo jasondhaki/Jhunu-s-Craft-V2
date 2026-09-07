@@ -49,6 +49,12 @@ The app runs at http://localhost:3000.
 | `npm run db:seed` | Load the sample catalog |
 | `npm run db:studio` | Browse the database |
 
+### Deployment note
+
+`vercel-build` is currently `prisma generate && next build` — no `migrate deploy`, because there is no database yet and a migrate step would fail the build. Nothing in Phase 0 reads from Postgres, so the site deploys and renders fine without one.
+
+**Once `DATABASE_URL` is set in Vercel, switch the build command to `vercel-build:with-db`** (or copy its value into `vercel-build`) so migrations run on every deploy, per §24.
+
 ## Conventions worth knowing before you touch the code
 
 These are the ones easiest to break by accident. The full list is in `CLAUDE.md`.
