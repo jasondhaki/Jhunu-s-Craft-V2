@@ -167,8 +167,13 @@ export function SiteFooter() {
               )}
               {real(siteConfig.address.line1) && (
                 <p>
-                  {real(siteConfig.address.line1)}
-                  {real(siteConfig.address.city) && `, ${siteConfig.address.city}`}
+                  {[real(siteConfig.address.line1), real(siteConfig.address.line2)]
+                    .filter(Boolean)
+                    .join(', ')}
+                  <br />
+                  {[real(siteConfig.address.city), real(siteConfig.address.postcode)]
+                    .filter(Boolean)
+                    .join(' - ')}
                   <br />
                   {siteConfig.address.country}
                 </p>

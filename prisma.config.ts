@@ -19,7 +19,13 @@ export default defineConfig({
   schema: path.join('prisma', 'schema.prisma'),
 
   datasource: {
-    url: env('DATABASE_URL'),
+    /**
+     * Migrations use the DIRECT (unpooled) connection. Neon's pooler runs in
+     * transaction mode, which doesn't hold the session state that DDL and
+     * advisory locks need — running migrations through it fails in confusing
+     * ways. The app itself uses the pooled URL (see src/lib/db.ts).
+     */
+    url: process.env.DIRECT_DATABASE_URL ?? env('DATABASE_URL'),
   },
 
   migrations: {

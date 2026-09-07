@@ -32,11 +32,16 @@ export const siteConfig = {
    * (§6.3.13), and the About page (§6.8). CONTEXT.md Q1.
    */
   maker: {
-    name: '[MAKER_NAME]',
+    name: 'James Dilip Dhaki',
+    /**
+     * A person's own spelling of their name is theirs to choose, and §22
+     * forbids machine translation. Left blank until he confirms how he
+     * writes it in Bangla — CONTEXT.md Q11.
+     */
     nameBn: '[MAKER_NAME_BN]',
     /** §1.4: "He's been making bags for 22 years" — specific, not superlative. */
     yearsOfExperience: '[YEARS_EXPERIENCE]',
-    location: '[WORKSHOP_LOCATION]',
+    location: 'Monipuripara, Tejgaon, Dhaka',
     locationBn: '[WORKSHOP_LOCATION_BN]',
   },
 
@@ -46,8 +51,16 @@ export const siteConfig = {
    * phone number as fatal in Bangladesh. CONTEXT.md Q3.
    */
   contact: {
-    phone: '[PHONE_NUMBER]',
-    phoneDisplay: '[PHONE_DISPLAY]',
+    /** E.164, no spaces — this is what goes in the `tel:` href. */
+    phone: '+8801730431932',
+    /** Human-readable, for display. */
+    phoneDisplay: '+880 1730 431932',
+    /**
+     * §14.1 wants a WhatsApp click-to-chat button, but a wa.me link to a
+     * number that isn't on WhatsApp is a broken trust signal — worse than
+     * no button. Left unset until confirmed (CONTEXT.md Q12); the button is
+     * simply not rendered meanwhile.
+     */
     whatsapp: '[WHATSAPP_NUMBER]',
     email: '[CONTACT_EMAIL]',
     ordersEmail: '[ORDERS_EMAIL]',
@@ -57,11 +70,12 @@ export const siteConfig = {
   },
 
   address: {
-    line1: '[ADDRESS_LINE_1]',
-    line2: '[ADDRESS_LINE_2]',
-    city: '[CITY]',
-    region: '[DIVISION]',
-    postcode: '[POSTCODE]',
+    line1: 'Monipuripara',
+    line2: 'Tejgaon',
+    /** District — §22: BD addresses are area/thana → district → division. */
+    city: 'Dhaka',
+    region: 'Dhaka',
+    postcode: '1215',
     country: 'Bangladesh',
     countryCode: 'BD',
   },
@@ -76,8 +90,27 @@ export const siteConfig = {
     pinterest: '[PINTEREST_URL]',
   },
 
-  /** CONTEXT.md Q4. Falls back to the Vercel URL until a domain is bought. */
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000',
+  /**
+   * Canonical origin, no trailing slash (§17.1). CONTEXT.md Q4.
+   *
+   * Resolution order:
+   *  1. NEXT_PUBLIC_SITE_URL — set this once a real domain exists. It is the
+   *     only one of the three that is stable, so canonical tags, sitemap
+   *     entries, and email links should all end up pointing at it.
+   *  2. VERCEL_PROJECT_PRODUCTION_URL — the project's stable production
+   *     hostname on Vercel. Correct for production deploys before a domain
+   *     is bought.
+   *  3. localhost, for local development.
+   *
+   * Deliberately NOT using VERCEL_URL: that is the per-deployment hostname
+   * and changes on every push, which would emit a different canonical URL
+   * for every deploy.
+   */
+  url:
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : 'http://localhost:3000'),
 
   /** §16.1 footer copyright. */
   legal: {
