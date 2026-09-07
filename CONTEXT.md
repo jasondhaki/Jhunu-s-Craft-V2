@@ -1,0 +1,186 @@
+# CONTEXT.md — Jhunu's Crafts
+
+**Purpose.** This is the project's working memory. Claude reads it at the start of a session and refreshes from it **every 10 prompts** to re-anchor context. Every decision taken, every action performed, and every open question gets written here as it happens.
+
+**Read order for a cold start:** this file → `ecommerce-master-plan.md` (the spec) → `CLAUDE.md` (working rules).
+
+---
+
+## 1. What this is
+
+An ecommerce site for **Jhunu's Crafts** — a one-maker family workshop in Bangladesh producing handmade jute and leather bags (women's side bags, handbags, shopping bags, totes).
+
+- **Repo:** https://github.com/jasondhaki/Jhunu-s-Craft-V2
+- **Spec:** `ecommerce-master-plan.md` — 28 sections, treated as the source of truth. Section numbers are cited throughout this file as `§n`.
+- **Hosting:** Vercel (temporary, per the owner's instruction).
+- **Markets:** Bangladesh (primary — BDT, COD-heavy) + international (secondary — USD, card, courier).
+- **Core positioning (§1.1):** every bag is made by one named person, by hand. Every design and copy decision reinforces that.
+
+---
+
+## 2. Decisions locked
+
+Recorded with the reasoning, so they don't get re-litigated.
+
+### D1 — Tech stack: fully custom Next.js + Prisma + Postgres
+**Date:** 2026-09-08 · **Status:** locked · **Plan §12**
+
+The plan recommended Medusa + Next.js storefront. Rejected because **Medusa needs a long-running Node process plus Redis, which Vercel cannot host** — it would have meant a second hosting provider on day one, contradicting the "deploy to Vercel" instruction.
+
+Built instead as **one Next.js 16 App Router project** containing storefront, admin, and API routes, with Prisma against Postgres. One Vercel project, no separate backend.
+
+This takes on the risks §12.1 warns about. Mitigations are build requirements, not aspirations:
+
+| Risk | Mitigation |
+|---|---|
+| Inventory races | Conditional update inside a transaction (`WHERE stock_quantity >= n`). Never read-then-write. §23.3 concurrency test is required. |
+| Order state sprawl | One explicit state machine module. No ad-hoc status strings in route handlers. |
+| Gateway lock-in | All gateways behind our own `PaymentProvider` interface (§8.3). |
+| Money rounding | Integer minor units (poisha / cents) everywhere. No floats in pricing, discount, shipping, tax. |
+| Duplicate orders / webhook retries | Idempotency key on order create; processed webhook event IDs recorded. |
+
+Escape hatch: the Prisma schema maps onto Medusa's primitives and payments are already abstracted, so a later migration is a migration, not a rewrite.
+
+**Plan updated:** §12.1 verdict + recommendation, §12.2 stack table, §12.3 repo structure.
+
+### D2 — Palette: Option D "Basket & Leaf", derived from the logo
+**Date:** 2026-09-08 · **Status:** locked · **Plan §2.1, §2.2**
+
+The plan's recommended Option A was ink-black + gold. The **existing logo is deep forest green + copper** on white, with the tagline "Eco-Friendly Products / পরিবেশবান্ধব পণ্য". Option A would have left the logo's green appearing nowhere else on the site.
+
+Kept the plan's *strategy* (dark structural frame, paper product canvas, jute-copper accent) and swapped the ink base for the logo's forest green:
+
+| Token | Hex | Use |
+|---|---|---|
+| `--forest` | `#14401F` | Header, footer, hero, primary text on light |
+| `--forest-soft` | `#2E5339` | Secondary text, borders on dark |
+| `--paper` | `#FAF8F3` | Page background, product canvas |
+| `--jute` | `#B87333` | Accent, CTA fill, price |
+| `--jute-deep` | `#8C5524` | CTA hover/active, focus rings |
+| `--hide` | `#5C3A24` | Leather category accent, secondary buttons |
+| `--leaf` | `#4C7A3F` | Success, in-stock, eco messaging |
+| `--clay` | `#A6432F` | Errors, sale badges, low stock |
+
+**Accessibility constraint carried forward:** `--jute` is 3.2:1 on paper — **not usable for body text**. Reserved for large text, button fills (white on it is 4.6:1), borders, non-text UI. `--jute-deep` (4.8:1) is the token for links and small text. This is a standing rule, not a one-off note.
+
+**Plan updated:** §2.1 decision note, §2.2 Option D inserted as SELECTED, Option A relabelled rejected.
+
+### D3 — Catalog scope: bags only, per §4
+**Date:** 2026-09-08 · **Status:** locked · **Plan §4**
+
+The logo says "Eco-Friendly Products" and shows a basket, which suggested a wider range. Owner confirmed **bags only** — jute / leather / mixed, exactly the taxonomy, filters, and SKU convention (`JUT-TOT-NAT-001`) in §4. No speculative extensibility work.
+
+### D4 — Database: seed data now, provision later
+**Date:** 2026-09-08 · **Status:** locked
+
+No Postgres instance yet. Building the full Prisma schema (§5) plus a realistic seed script (20–30 sample bags — §28 warns against launching with 4 products). Owner provisions Neon and supplies `DATABASE_URL` before deployment. Nothing is blocked by this.
+
+### D5 — Number grouping: by locale, not by currency
+**Date:** 2026-09-08 · **Status:** locked · **Plan §22**
+
+§22 flags this as an open choice: "Bangladeshi number grouping differs (lakh/crore) — decide whether to use it and be consistent."
+
+**Decision: group by UI locale, not by currency.** Bangla pages use Bengali digits and lakh/crore grouping (`৳৩,৪৫০`); English pages use Latin digits and thousands grouping (`৳3,450`), including for BDT. A Bangladeshi expat reading the English site with BDT prices gets thousands grouping, which is what that reader expects.
+
+Never mixed within one page. Implemented in `formatMoney` in `src/lib/money.ts` — the single place a money value becomes a string.
+
+---
+
+## 3. Action log
+
+Newest last. Every action Claude takes on this project is recorded here.
+
+### 2026-09-08 — Session 1
+
+| # | Action | Detail |
+|---|---|---|
+| 1 | Read the spec | `ecommerce-master-plan.md`, all 1568 lines / 28 sections. |
+| 2 | Inspected the logo | `Logo of Jhunu's Craft.jpeg`. Found forest green + copper, "Eco-Friendly Products / পরিবেশবান্ধব পণ্য". Conflicts with plan §2.2 Option A — raised it rather than building on a mismatch. |
+| 3 | Checked toolchain | Node v24.16.0, npm 12.0.2, git 2.52.0. |
+| 4 | Asked the 4 structural questions | Stack, palette, catalog scope, database. All answered → D1–D4 above. |
+| 5 | Scaffolded Next.js | `create-next-app` → Next.js 16.3.4, React 19.2.8, Tailwind 4, TypeScript, ESLint, App Router, `src/`, `@/*` alias. Scaffolded into a temp subdir and moved up, because the folder name `Jhunu's Craft - V2` is not a valid npm package name. |
+| 6 | Initialised git | `git init`, branch `main`, remote `origin` → github.com/jasondhaki/Jhunu-s-Craft-V2. |
+| 7 | Installed dependencies | prisma, @prisma/client, zod, zustand, clsx, tailwind-merge, lucide-react, tsx. |
+| 8 | Applied D1 + D2 to the plan | 8 surgical edits to `ecommerce-master-plan.md` (§2.1, §2.2, §12.1 ×2, §12.2 ×3, §12.3). Rejected options kept in place, labelled, with reasoning — nothing deleted. 88,022 → 92,453 chars. |
+| 9 | Created this file | `CONTEXT.md`. |
+| 10 | Wrote `CLAUDE.md` | Working rules: read order, non-negotiables table (each row traced to a plan section), stack, structure, conventions, definition of done. |
+| 11 | Hit a Prisma trap | `npm install prisma` resolved to **8.0.0-rc.13** — npm's `latest` dist-tag points at a release candidate whose CLI is completely different (no `generate`, `migrate`, or `db seed`). Pinned to **7.10.0** (npm's `prev` tag = current stable) with `--save-exact`. |
+| 12 | Approved blocked install scripts | npm 12 blocks postinstall scripts by default. Approved exactly the four toolchain packages that need them: `@prisma/engines`, `esbuild` (tsx depends on it), `prisma`, `unrs-resolver`. Recorded in `allowScripts` in package.json. |
+| 13 | Wrote the Prisma schema | `prisma/schema.prisma` — every §5 model plus Session, VerificationToken, OrderEvent, CouponRedemption, BackInStockAlert, WebhookEvent, ShippingZone/Rate, AdminUser, AuditLog. All money columns are `Int` (minor units). Validates clean. |
+| 14 | Adapted to Prisma 7 | Prisma 7 removed `url` from the datasource block. Added `prisma.config.ts` (connection URL + seed command) and `@prisma/adapter-pg` for the runtime client. Credentials now live only in the environment (§13.7). |
+| 15 | Created env files | `.env.example` committed as the annotated template; `.env` gitignored with dev placeholders. Patched `.gitignore` so `.env*` still ignores real env files but `!.env.example` stays tracked. Verified with `git check-ignore`. |
+| 16 | Built the design system | `src/app/globals.css` — §2.2 Option D palette, §2.4 type scale + Bangla line-height, §2.5 radius/elevation (deliberately differentiated per §2.5), §2.6 breakpoints, §2.7 motion + `prefers-reduced-motion`, §20 focus ring and skip link. |
+| 17 | Wrote `src/lib/money.ts` | Integer minor units with runtime guards that throw on a non-integer. Percentages in basis points. `formatMoney` is the only place a value becomes a string. Resolved §22's open lakh/crore question — see D5. |
+| 18 | Wrote `src/lib/site-config.ts` | Every unknown real-world value in ONE file as `[PLACEHOLDER]`, with `placeholdersRemaining()` for the §25 pre-launch check and `real()` so no page ever renders `[MAKER_NAME]` to a customer. |
+| 19 | Built layout, header, footer, homepage | Fonts self-hosted via next/font, which satisfies §2.4's no-hotlinking rule. Header §3.2, footer §3.3, homepage §6.1 in the specified section order. No carousel (§6.1, §28). No stock photography — marked photo slots instead (§28). |
+| 20 | Handled lucide's dropped brand icons | lucide-react no longer ships Facebook/Instagram icons (they are trademarks, not generic glyphs). Added `src/components/ui/social-icons.tsx` with inline CC0 Simple Icons paths plus a §16.2 note on trademark vs artwork licensing. |
+| 21 | Verified the toolchain | `tsc --noEmit` clean · `eslint` clean · `next build` succeeds (compiled in 16.1s, 2 static routes). |
+| 22 | Added scripts + README | `npm run check` (typecheck + lint + build) as the pre-push gate; `vercel-build` runs generate → migrate deploy → build. README rewritten from the create-next-app default. |
+
+---
+
+## 4. Build progress against §27
+
+| Phase | Scope | Status |
+|---|---|---|
+| **0 — Foundations** | Repo, tooling, design tokens, component skeleton, DB schema, staging | **Mostly done** — repo, tooling, tokens, schema, money/config libs, header/footer/homepage all built and building clean. Remaining: staging environment, and the rest of the §2.9 primitives. |
+| **1 — Catalog** | Product model, admin CRUD, image pipeline, home, category, PDP, search, filters | Next |
+| **2 — Commerce** | Cart, guest checkout, COD, order creation, confirmation email, admin orders | Not started |
+| **3 — Payments & accounts** | Gateway + webhooks, accounts, order history, guest tracking, wishlist, emails | Not started |
+| **4 — Trust & content** | Reviews, content + policy pages, FAQ, SEO, structured data, analytics | Not started |
+| **5 — Polish & launch** | Performance, a11y, cross-device QA, security review, real payment test | Not started |
+
+§27 note being honoured: **the admin panel is not left until last** (§28's first listed mistake) — the owner's father is the content bottleneck and cannot add products without it.
+
+---
+
+## 5. Open questions — need input from the owner
+
+Blocking items are marked. Unblocked ones are being built around with clearly-marked placeholders in a single config file, not scattered through the code.
+
+| # | Question | Why it matters | Blocking? |
+|---|---|---|---|
+| Q1 | **The maker's name** (the father) | §1.3 positioning line, PDP maker credit (§6.3.13), About page (§6.8), every "made by hand by ___" string. Currently `[MAKER_NAME]`. | Not yet — blocks content pages (Phase 4) |
+| Q2 | **Brand name spelling** — logo says "Jhunu's Craft**s**", repo says "Jhunu-s-Craft-V2" | Affects title tags, `Organization` schema, footer copyright, emails. Using **"Jhunu's Crafts"** (matching the logo) until told otherwise. | No |
+| Q3 | **Phone number, WhatsApp number, physical address** | §14.1 — "nothing signals *real business* harder". Footer + contact + §17.2 `LocalBusiness` schema. §28 lists "no phone number" as a fatal trust error in Bangladesh. | No — blocks launch |
+| Q4 | **Domain name** | §24. Needed for SPF/DKIM/DMARC, canonical URLs, `orders@` sender. | No — blocks deployment beyond the `.vercel.app` URL |
+| Q5 | **Social links** (Facebook, Instagram, WhatsApp) | Footer, `sameAs` in `Organization` schema. §14.1: a dead social link is worse than none. | No |
+| Q6 | **Real product photos** | §21 — "will make or break this site more than any code decision". §28: stock photos are instantly fatal to trust. Seed data uses obvious placeholders. | No — blocks launch |
+| Q7 | **Payment gateway account** — SSLCommerz / aamarPay / ShurjoPay? | §8.1. Determines the first `PaymentProvider` adapter. COD works without it. | No — blocks Phase 3 |
+| Q8 | **International payment acceptance** — unresolved in §8.2 | Plan flags this as the one thing that could change the plan structurally. Stripe/PayPal do not support BD merchants. Needs confirmation with the owner's bank + gateway. | No — blocks international sales only |
+| Q9 | **Neon `DATABASE_URL`** | Per D4. | No — blocks deployment |
+| Q10 | **Bangla copy** | §22 forbids machine translation — it "undermines the handmade authenticity". Bangla fields exist in the schema but must be written by a human. | No — blocks bilingual launch |
+
+---
+
+## 6. Standing rules
+
+Carried from the plan; violated at the project's peril. These are the ones easiest to break by accident.
+
+1. **Never auto-convert currency** (§8.4, §28). BDT and USD are separate manually-set fields.
+2. **Never mark an order paid on the browser redirect** (§8.3, §28). Only a signature-verified webhook does that.
+3. **Money is integer minor units.** No floats. (D1)
+4. **No forced registration at checkout** (§6.5, §28).
+5. **Shipping cost is visible before the payment step** (§6.5, §28).
+6. **Never remove focus outlines** (§20, §28).
+7. **No dark patterns** (§14.5) — no fake urgency, no fake view counts, no pre-ticked marketing boxes, no fake reviews.
+8. **Alt text is required, not optional**, on every product image (§5.3, §20).
+9. **Every product needs `weight_grams`** (§9.2, §28) or international rates break.
+10. **Snapshot order line items** (§5.5). Never join to the live product for historical orders.
+11. **No secrets in the repo** (§13.7). `.env` is gitignored from day one.
+12. **`--jute` is never body text** (D2). Use `--jute-deep`.
+13. **Mobile-first, 375px built first** (§2.6). Most traffic is Android on mobile data.
+14. **No carousel hero** (§6.1, §28).
+15. **Server-render everything customer-facing** (§17.1).
+
+---
+
+## 7. Refresh protocol
+
+When re-reading this file (every 10 prompts, or on a cold start):
+
+1. Re-read §2 (decisions) and §6 (standing rules) — these constrain all new work.
+2. Check §4 for the current phase; do not skip ahead.
+3. Check §5 for anything now unblocked by owner input.
+4. Append new actions to §3. **Never rewrite history** — add rows, don't edit old ones.
+5. When a decision changes, add a new `D<n>` entry with the date and reason and mark the old one `superseded by D<n>`. Do not delete it.

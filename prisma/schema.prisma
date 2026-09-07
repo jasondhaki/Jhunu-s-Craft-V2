@@ -1,0 +1,992 @@
+// Jhunu's Crafts — data model
+// Implements plan §5 (data models) with the §4 taxonomy.
+//
+// MONEY: every amount is an Int in MINOR UNITS — poisha for BDT, cents for
+// USD (CONTEXT.md D1). ৳3,450.00 is stored as 345000. No Float/Decimal
+// anywhere in pricing, discount, shipping, or tax. Format at the edge only,
+// via src/lib/money.ts.
+//
+// CURRENCY: BDT and USD prices are separate, manually-set fields. Never
+// derived from each other at runtime (§8.4, §28).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // Prisma 7: the connection URL lives in prisma.config.ts, and the client
+  // gets a driver adapter. Nothing secret belongs in this file (§13.7).
+}
+
+// ===========================================================================
+// Taxonomy (§4)
+// ===========================================================================
+
+enum Material {
+  JUTE
+  LEATHER
+  MIXED // jute body + leather straps/trim (§4.1)
+}
+
+enum BagType {
+  HANDBAG
+  SIDE_BAG
+  CROSSBODY
+  TOTE
+  SHOPPING_BAG
+  LAPTOP_BAG
+  CLUTCH
+  BACKPACK
+}
+
+enum Closure {
+  ZIP
+  MAGNETIC
+  DRAWSTRING
+  OPEN
+}
+
+enum StrapType {
+  SHOULDER
+  CROSSBODY
+  HANDLE
+  DETACHABLE
+}
+
+enum SizeBand {
+  SMALL
+  MEDIUM
+  LARGE
+}
+
+// ===========================================================================
+// Product (§5.1)
+// ===========================================================================
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+model Product {
+  id   String @id @default(cuid())
+  slug String @unique // URL-safe; never change without a 301 (§17.1)
+
+  nameEn String @map("name_en")
+  nameBn String @map("name_bn")
+
+  // 1–2 lines, used in cards and meta descriptions
+  shortDescriptionEn String @map("short_description_en")
+  shortDescriptionBn String @map("short_description_bn")
+
+  descriptionEn String @map("description_en") @db.Text
+  descriptionBn String @map("description_bn") @db.Text
+
+  material Material
+  bagType  BagType   @map("bag_type")
+  closure  Closure?
+  strap    StrapType?
+  sizeBand SizeBand? @map("size_band")
+
+  // --- Pricing: minor units, set manually per currency (§8.4) ---
+  basePriceBdt Int  @map("base_price_bdt") // poisha
+  basePriceUsd Int  @map("base_price_usd") // cents
+  // Nullable — a value here renders a strikethrough (§6.3)
+  compareAtPriceBdt Int? @map("compare_at_price_bdt")
+  compareAtPriceUsd Int? @map("compare_at_price_usd")
+  // Admin-only, for margin reports (§11.4). Never exposed to the storefront.
+  costPriceBdt Int? @map("cost_price_bdt")
+
+  // --- Physical (§5.1) ---
+  lengthCm  Float @map("length_cm")
+  widthCm   Float @map("width_cm")
+  heightCm  Float @map("height_cm")
+  strapDropCm Float? @map("strap_drop_cm")
+  // REQUIRED, not optional — international shipping quotes break without it
+  // (§9.2, §28).
+  weightGrams Int @map("weight_grams")
+
+  capacityNoteEn String @map("capacity_note_en") // "Fits a 13\" laptop, A4 documents"
+  capacityNoteBn String @map("capacity_note_bn")
+
+  materialsDetailEn String @map("materials_detail_en") @db.Text
+  materialsDetailBn String @map("materials_detail_bn") @db.Text
+
+  careInstructionsEn String @map("care_instructions_en") @db.Text
+  careInstructionsBn String @map("care_instructions_bn") @db.Text
+
+  madeToOrder    Boolean @default(false) @map("made_to_order")
+  productionDays Int?    @map("production_days") // if made to order
+
+  status   ProductStatus @default(DRAFT)
+  featured Boolean       @default(false)
+
+  metaTitle       String? @map("meta_title")
+  metaDescription String? @map("meta_description")
+
+  viewCount Int @default(0) @map("view_count")
+  soldCount Int @default(0) @map("sold_count")
+
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  publishedAt DateTime? @map("published_at")
+
+  variants    Variant[]
+  images      ProductImage[]
+  collections CollectionProduct[]
+  tags        ProductTag[]
+  reviews     Review[]
+  orderItems  OrderItem[]
+  cartItems   CartItem[]
+  wishlist    WishlistItem[]
+  stockAlerts BackInStockAlert[]
+
+  @@index([status, publishedAt])
+  @@index([material, bagType])
+  @@index([featured])
+  @@map("products")
+}
+
+// ===========================================================================
+// Variant (§5.2)
+// ===========================================================================
+
+model Variant {
+  id        String  @id @default(cuid())
+  productId String  @map("product_id")
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  sku String @unique // §4.7 — [MAT]-[TYPE]-[COLOR]-[NNN]
+
+  colorNameEn String  @map("color_name_en")
+  colorNameBn String  @map("color_name_bn")
+  colorHex    String  @map("color_hex")
+  sizeLabel   String? @map("size_label")
+
+  // Nullable overrides; fall back to the product's base price
+  priceOverrideBdt Int? @map("price_override_bdt")
+  priceOverrideUsd Int? @map("price_override_usd")
+
+  // Mutated ONLY through a conditional UPDATE inside a transaction
+  // (WHERE stock_quantity >= n) — never read-then-write (CONTEXT.md D1, §23.3).
+  stockQuantity     Int @default(0) @map("stock_quantity")
+  lowStockThreshold Int @default(3) @map("low_stock_threshold")
+
+  barcode String?
+  imageId String? @map("image_id") // which gallery image represents this variant
+
+  isActive Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  stockMovements StockMovement[]
+  orderItems     OrderItem[]
+  cartItems      CartItem[]
+  wishlist       WishlistItem[]
+  stockAlerts    BackInStockAlert[]
+
+  @@index([productId])
+  @@map("variants")
+}
+
+// ===========================================================================
+// Images (§5.3)
+// ===========================================================================
+
+enum ImageType {
+  PRODUCT
+  LIFESTYLE
+  DETAIL
+  SCALE
+  MAKER
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String  @map("product_id")
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  variantId String? @map("variant_id")
+
+  url    String
+  width  Int
+  height Int
+  // base64 LQIP so the grid never shifts while loading (§19)
+  blurPlaceholder String? @map("blur_placeholder")
+
+  // REQUIRED — not optional (§5.3, §20)
+  altTextEn String @map("alt_text_en")
+  altTextBn String @map("alt_text_bn")
+
+  position Int       @default(0)
+  type     ImageType @default(PRODUCT)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([productId, position])
+  @@map("product_images")
+}
+
+// ===========================================================================
+// Collections & tags (§4.5)
+// ===========================================================================
+
+model Collection {
+  id   String @id @default(cuid())
+  slug String @unique
+
+  titleEn String @map("title_en")
+  titleBn String @map("title_bn")
+  // Collections are strong SEO landing pages — they need real intro copy (§4.5)
+  introEn String @map("intro_en") @db.Text
+  introBn String @map("intro_bn") @db.Text
+
+  heroImageUrl String? @map("hero_image_url")
+  heroImageAlt String? @map("hero_image_alt")
+
+  metaTitle       String? @map("meta_title")
+  metaDescription String? @map("meta_description")
+
+  position Int     @default(0)
+  isActive Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  products CollectionProduct[]
+
+  @@map("collections")
+}
+
+model CollectionProduct {
+  collectionId String     @map("collection_id")
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  productId    String     @map("product_id")
+  product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  position     Int        @default(0)
+
+  @@id([collectionId, productId])
+  @@map("collection_products")
+}
+
+model Tag {
+  id      String @id @default(cuid())
+  slug    String @unique
+  labelEn String @map("label_en")
+  labelBn String @map("label_bn")
+
+  products ProductTag[]
+
+  @@map("tags")
+}
+
+model ProductTag {
+  productId String  @map("product_id")
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  tagId     String  @map("tag_id")
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([productId, tagId])
+  @@map("product_tags")
+}
+
+// ===========================================================================
+// Customer & address (§5.6)
+// ===========================================================================
+
+model Customer {
+  id           String  @id @default(cuid())
+  email        String  @unique
+  phone        String?
+  // Argon2id (§13.2). Nullable — guests become customers without a password.
+  passwordHash String? @map("password_hash")
+
+  firstName String? @map("first_name")
+  lastName  String? @map("last_name")
+
+  emailVerifiedAt DateTime? @map("email_verified_at")
+  marketingOptIn  Boolean   @default(false) @map("marketing_opt_in") // never pre-ticked (§14.5)
+  acceptsSms      Boolean   @default(false) @map("accepts_sms")
+
+  defaultAddressId String? @map("default_address_id")
+
+  totalOrders Int @default(0) @map("total_orders")
+  totalSpent  Int @default(0) @map("total_spent") // minor units, BDT
+
+  isBlocked Boolean @default(false) @map("is_blocked")
+
+  // Set when the customer requests deletion — historical orders are
+  // anonymised, not broken (§13.8, §6.7).
+  anonymisedAt DateTime? @map("anonymised_at")
+
+  createdAt   DateTime  @default(now()) @map("created_at")
+  lastLoginAt DateTime? @map("last_login_at")
+
+  addresses Address[]
+  orders    Order[]
+  reviews   Review[]
+  wishlist  WishlistItem[]
+  carts     Cart[]
+  sessions  Session[]
+  tokens    VerificationToken[]
+
+  @@map("customers")
+}
+
+model Address {
+  id         String   @id @default(cuid())
+  customerId String   @map("customer_id")
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  label         String? // "Home", "Office"
+  recipientName String  @map("recipient_name")
+  phone         String
+
+  line1 String
+  line2 String?
+  // Address shape adapts by country (§22): thana/district/division for BD,
+  // state/ZIP for US, county/postcode for UK. Stored generically.
+  area     String? // Thana / Upazila
+  city     String // District
+  region   String? // Division / State / County
+  postcode String?
+  country  String  @default("BD") // ISO 3166-1 alpha-2
+
+  isDefault Boolean @default(false) @map("is_default")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([customerId])
+  @@map("addresses")
+}
+
+// ===========================================================================
+// Auth (§13.2)
+// ===========================================================================
+
+model Session {
+  id         String   @id @default(cuid())
+  customerId String   @map("customer_id")
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  // The raw token lives only in an httpOnly cookie; this is its hash.
+  tokenHash String   @unique @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+
+  ipAddress String? @map("ip_address")
+  userAgent String? @map("user_agent")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([customerId])
+  @@map("sessions")
+}
+
+enum TokenPurpose {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+model VerificationToken {
+  id         String   @id @default(cuid())
+  customerId String   @map("customer_id")
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  purpose TokenPurpose
+  // Hashed in the database, single-use, short expiry (§13.2)
+  tokenHash String       @unique @map("token_hash")
+  expiresAt DateTime     @map("expires_at")
+  usedAt    DateTime?    @map("used_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([customerId, purpose])
+  @@map("verification_tokens")
+}
+
+// ===========================================================================
+// Cart (§5.6, §6.4)
+// ===========================================================================
+
+enum Currency {
+  BDT
+  USD
+}
+
+model Cart {
+  id String @id @default(cuid())
+
+  customerId String?   @map("customer_id")
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  // Guests are identified by an opaque cookie token; the cart merges into
+  // the customer's on login (§6.4).
+  sessionToken String   @unique @map("session_token")
+  currency     Currency @default(BDT)
+
+  abandonedEmailSentAt DateTime? @map("abandoned_email_sent_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  items CartItem[]
+
+  @@index([customerId])
+  @@index([updatedAt]) // abandoned-cart sweep + retention deletion (§13.8)
+  @@map("carts")
+}
+
+model CartItem {
+  id     String @id @default(cuid())
+  cartId String @map("cart_id")
+  cart   Cart   @relation(fields: [cartId], references: [id], onDelete: Cascade)
+
+  productId String  @map("product_id")
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variantId String  @map("variant_id")
+  variant   Variant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  quantity            Int
+  personalizationNote String? @map("personalization_note")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([cartId, variantId])
+  @@index([cartId])
+  @@map("cart_items")
+}
+
+// ===========================================================================
+// Order (§5.4)
+// ===========================================================================
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  IN_PRODUCTION
+  PACKED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  RETURN_REQUESTED
+  RETURNED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  PARTIALLY_REFUNDED
+  REFUNDED
+  FAILED
+}
+
+enum PaymentMethod {
+  COD
+  BKASH
+  NAGAD
+  CARD
+  BANK_TRANSFER
+}
+
+model Order {
+  id String @id @default(cuid())
+  // Human-readable, e.g. BD-2026-00412 (§5.4). Non-sequential public
+  // reference is used in URLs instead of the id (§13.3).
+  orderNumber String @unique @map("order_number")
+  publicToken String @unique @map("public_token") // guest tracking (§6.9)
+
+  customerId String?   @map("customer_id")
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  email String
+  phone String
+
+  status        OrderStatus   @default(PENDING)
+  paymentStatus PaymentStatus @default(UNPAID) @map("payment_status")
+  paymentMethod PaymentMethod @map("payment_method")
+
+  // Gateway transaction id + which provider adapter handled it (§8.3)
+  paymentProvider  String? @map("payment_provider")
+  paymentReference String? @map("payment_reference")
+
+  currency Currency
+
+  // All minor units (CONTEXT.md D1)
+  subtotal      Int
+  discountTotal Int @default(0) @map("discount_total")
+  shippingTotal Int @default(0) @map("shipping_total")
+  taxTotal      Int @default(0) @map("tax_total")
+  grandTotal    Int @map("grand_total")
+
+  couponCode String? @map("coupon_code")
+
+  // Snapshots, not references (§5.4) — an address edit must not rewrite
+  // a historical order.
+  shippingAddress Json @map("shipping_address")
+  billingAddress  Json @map("billing_address")
+
+  shippingMethod String  @map("shipping_method")
+  courierName    String? @map("courier_name")
+  trackingNumber String? @map("tracking_number")
+  trackingUrl    String? @map("tracking_url")
+
+  customerNote String? @map("customer_note")
+  internalNote String? @map("internal_note") // admin-only (§11.2)
+
+  // Fraud review (§5.4, §13.6)
+  ipAddress String? @map("ip_address")
+  userAgent String? @map("user_agent")
+
+  // Prevents duplicate orders from a double-submit (§8.3, §6.5)
+  idempotencyKey String? @unique @map("idempotency_key")
+
+  placedAt    DateTime  @default(now()) @map("placed_at")
+  confirmedAt DateTime? @map("confirmed_at")
+  shippedAt   DateTime? @map("shipped_at")
+  deliveredAt DateTime? @map("delivered_at")
+  cancelledAt DateTime? @map("cancelled_at")
+
+  items          OrderItem[]
+  events         OrderEvent[]
+  reviews        Review[]
+  stockMovements StockMovement[]
+
+  @@index([customerId])
+  @@index([status, placedAt])
+  @@index([email])
+  @@index([phone])
+  @@map("orders")
+}
+
+model OrderItem {
+  id      String @id @default(cuid())
+  orderId String @map("order_id")
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  // Nullable: a product may later be deleted. The snapshots below are what
+  // the invoice renders from — never join to the live product (§5.5).
+  productId String?  @map("product_id")
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  variantId String?  @map("variant_id")
+  variant   Variant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  productNameSnapshot  String  @map("product_name_snapshot")
+  skuSnapshot          String  @map("sku_snapshot")
+  variantLabelSnapshot String  @map("variant_label_snapshot")
+  imageUrlSnapshot     String? @map("image_url_snapshot")
+
+  unitPrice Int @map("unit_price") // minor units
+  quantity  Int
+  lineTotal Int @map("line_total")
+
+  personalizationNote String? @map("personalization_note")
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+// Append-only status timeline (§6.7, §11.2)
+model OrderEvent {
+  id      String @id @default(cuid())
+  orderId String @map("order_id")
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  fromStatus OrderStatus? @map("from_status")
+  toStatus   OrderStatus  @map("to_status")
+  note       String?
+  createdBy  String?      @map("created_by") // admin user id, or null for system
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([orderId, createdAt])
+  @@map("order_events")
+}
+
+// ===========================================================================
+// Inventory (§5.6)
+// ===========================================================================
+
+enum StockReason {
+  SALE
+  RESTOCK
+  ADJUSTMENT
+  RETURN
+  DAMAGE
+}
+
+model StockMovement {
+  id        String  @id @default(cuid())
+  variantId String  @map("variant_id")
+  variant   Variant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  delta  Int // negative for a sale
+  reason StockReason
+
+  orderId String? @map("order_id")
+  order   Order?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  note      String?
+  createdBy String?  @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([variantId, createdAt])
+  @@map("stock_movements")
+}
+
+model BackInStockAlert {
+  id        String  @id @default(cuid())
+  productId String  @map("product_id")
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variantId String  @map("variant_id")
+  variant   Variant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  email    String
+  notified Boolean @default(false)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([variantId, email])
+  @@map("back_in_stock_alerts")
+}
+
+// ===========================================================================
+// Reviews (§5.6, §14.3)
+// ===========================================================================
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Review {
+  id        String  @id @default(cuid())
+  productId String  @map("product_id")
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  customerId String?   @map("customer_id")
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  orderId    String?   @map("order_id")
+  order      Order?    @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  authorName String @map("author_name")
+
+  rating Int // 1–5
+  title  String?
+  body   String  @db.Text
+
+  imageUrls String[] @map("image_urls")
+
+  // Badge shown on the review (§14.3). Set only when orderId is a real
+  // delivered order containing this product.
+  verifiedPurchase Boolean @default(false) @map("verified_purchase")
+
+  status     ReviewStatus @default(PENDING)
+  adminReply String?      @map("admin_reply") @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([productId, status])
+  @@map("reviews")
+}
+
+// ===========================================================================
+// Coupons (§5.6)
+// ===========================================================================
+
+enum CouponType {
+  PERCENT
+  FIXED
+  FREE_SHIPPING
+}
+
+enum CouponScope {
+  ALL
+  COLLECTION
+  PRODUCT
+}
+
+model Coupon {
+  id   String @id @default(cuid())
+  code String @unique
+
+  type  CouponType
+  // PERCENT: basis points (1000 = 10%). FIXED: minor units.
+  value Int
+
+  minOrderValue Int? @map("min_order_value") // minor units
+
+  usageLimitTotal       Int? @map("usage_limit_total")
+  usageLimitPerCustomer Int? @map("usage_limit_per_customer")
+  usedCount             Int  @default(0) @map("used_count")
+
+  appliesTo   CouponScope @default(ALL) @map("applies_to")
+  targetIds   String[]    @map("target_ids")
+
+  startsAt DateTime? @map("starts_at")
+  endsAt   DateTime? @map("ends_at")
+  isActive Boolean   @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  redemptions CouponRedemption[]
+
+  @@map("coupons")
+}
+
+// Enforces per-customer limits server-side, re-checked at order creation
+// rather than only when the code is applied (§13.6).
+model CouponRedemption {
+  id       String @id @default(cuid())
+  couponId String @map("coupon_id")
+  coupon   Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+
+  customerId String? @map("customer_id")
+  email      String
+  orderId    String  @map("order_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([couponId, email])
+  @@map("coupon_redemptions")
+}
+
+// ===========================================================================
+// Wishlist (§5.6, §6.7)
+// ===========================================================================
+
+model WishlistItem {
+  id         String   @id @default(cuid())
+  customerId String   @map("customer_id")
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  productId String  @map("product_id")
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variantId String? @map("variant_id")
+  variant   Variant? @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([customerId, productId, variantId])
+  @@map("wishlist_items")
+}
+
+// ===========================================================================
+// Marketing & messages (§5.6)
+// ===========================================================================
+
+model NewsletterSubscriber {
+  id     String @id @default(cuid())
+  email  String @unique
+  source String? // where they signed up
+
+  // Double opt-in (§5.6, §10.1)
+  confirmed      Boolean   @default(false)
+  confirmToken   String?   @unique @map("confirm_token")
+  confirmedAt    DateTime? @map("confirmed_at")
+  unsubscribedAt DateTime? @map("unsubscribed_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("newsletter_subscribers")
+}
+
+enum MessageType {
+  GENERAL
+  CUSTOM_ORDER
+  WHOLESALE
+  COMPLAINT
+}
+
+enum MessageStatus {
+  NEW
+  IN_PROGRESS
+  RESOLVED
+}
+
+model ContactMessage {
+  id      String  @id @default(cuid())
+  name    String
+  email   String
+  phone   String?
+  subject String
+  message String  @db.Text
+
+  type   MessageType   @default(GENERAL)
+  status MessageStatus @default(NEW)
+
+  adminNote String? @map("admin_note") @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([status, createdAt])
+  @@map("contact_messages")
+}
+
+// ===========================================================================
+// CMS pages (§5.6, §11.4)
+// ===========================================================================
+
+enum PageStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model Page {
+  id   String @id @default(cuid())
+  slug String @unique
+
+  titleEn String @map("title_en")
+  titleBn String @map("title_bn")
+  bodyEn  String @map("body_en") @db.Text
+  bodyBn  String @map("body_bn") @db.Text
+
+  metaTitle       String? @map("meta_title")
+  metaDescription String? @map("meta_description")
+
+  status PageStatus @default(DRAFT)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("pages")
+}
+
+// ===========================================================================
+// Admin (§11.4, §13.7)
+// ===========================================================================
+
+enum AdminRole {
+  OWNER // everything
+  MANAGER // orders, products, customers
+  STAFF // orders only
+}
+
+model AdminUser {
+  id    String @id @default(cuid())
+  email String @unique
+  name  String
+
+  passwordHash String @map("password_hash") // Argon2id (§13.2)
+  role         AdminRole @default(STAFF)
+
+  // 2FA is mandatory on all admin accounts (§13.2) — the single
+  // highest-value security control on the site.
+  totpSecret     String?  @map("totp_secret")
+  totpEnabledAt  DateTime? @map("totp_enabled_at")
+  recoveryCodes  String[] @map("recovery_codes")
+
+  isActive    Boolean   @default(true) @map("is_active")
+  lastLoginAt DateTime? @map("last_login_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  auditLogs AuditLog[]
+
+  @@map("admin_users")
+}
+
+// Every admin action: who, what, before, after, when (§13.7, §11.4)
+model AuditLog {
+  id          String     @id @default(cuid())
+  adminUserId String?    @map("admin_user_id")
+  adminUser   AdminUser? @relation(fields: [adminUserId], references: [id], onDelete: SetNull)
+
+  action     String // "product.update", "order.refund"
+  entityType String @map("entity_type")
+  entityId   String @map("entity_id")
+
+  beforeJson Json? @map("before_json")
+  afterJson  Json? @map("after_json")
+
+  ipAddress String? @map("ip_address")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([entityType, entityId])
+  @@index([adminUserId, createdAt])
+  @@map("audit_logs")
+}
+
+// ===========================================================================
+// Payments & webhooks (§8.3)
+// ===========================================================================
+
+// Records processed gateway event ids so a retried or replayed webhook is a
+// no-op — stock must never be decremented twice (§8.3, §23.3).
+model WebhookEvent {
+  id         String @id @default(cuid())
+  provider   String
+  eventId    String @map("event_id")
+  payload    Json
+  signature  String?
+
+  processedAt DateTime? @map("processed_at")
+  error       String?   @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([provider, eventId])
+  @@map("webhook_events")
+}
+
+// ===========================================================================
+// Shipping (§9)
+// ===========================================================================
+
+model ShippingZone {
+  id   String @id @default(cuid())
+  code String @unique // "BD_DHAKA", "BD_OUTSIDE", "INTL_EU"
+
+  nameEn String @map("name_en")
+  nameBn String @map("name_bn")
+
+  // ISO country codes; for BD zones, the districts the zone covers
+  countries String[]
+  regions   String[]
+
+  position Int     @default(0)
+  isActive Boolean @default(true) @map("is_active")
+
+  rates ShippingRate[]
+
+  @@map("shipping_zones")
+}
+
+model ShippingRate {
+  id     String       @id @default(cuid())
+  zoneId String       @map("zone_id")
+  zone   ShippingZone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  nameEn String @map("name_en")
+  nameBn String @map("name_bn")
+
+  // Weight band in grams; rates are per band per zone (§9.2)
+  minWeightGrams Int  @default(0) @map("min_weight_grams")
+  maxWeightGrams Int? @map("max_weight_grams")
+
+  priceBdt Int @map("price_bdt") // minor units
+  priceUsd Int @map("price_usd")
+
+  // Order subtotal above which this rate becomes free (§9.1). Null = never.
+  freeAboveBdt Int? @map("free_above_bdt")
+  freeAboveUsd Int? @map("free_above_usd")
+
+  minDays Int @map("min_days")
+  maxDays Int @map("max_days")
+
+  courierName String? @map("courier_name")
+  codFeeBdt   Int?    @map("cod_fee_bdt") // shown explicitly at checkout (§6.5)
+
+  isActive Boolean @default(true) @map("is_active")
+
+  @@index([zoneId])
+  @@map("shipping_rates")
+}

@@ -1,0 +1,184 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   Jhunu's Crafts — design tokens
+   Plan §2. Palette is §2.2 Option D "Basket & Leaf" (CONTEXT.md D2),
+   derived from the logo: deep forest green + copper on paper.
+   ========================================================================== */
+
+@theme {
+  /* --- Color (§2.2 Option D) ------------------------------------------- */
+  --color-forest: #14401f; /* header, footer, hero, primary text on light */
+  --color-forest-soft: #2e5339; /* secondary text, borders on dark        */
+  --color-paper: #faf8f3; /* page background, product canvas              */
+  --color-paper-sunk: #f2eee4; /* subtle fills, input backgrounds         */
+  --color-jute: #b87333; /* accent, CTA fill, price                       */
+  --color-jute-deep: #8c5524; /* CTA hover/active, focus ring, links      */
+  --color-hide: #5c3a24; /* leather category accent, secondary buttons    */
+  --color-leaf: #4c7a3f; /* success, in stock, eco                        */
+  --color-clay: #a6432f; /* errors, sale badges, low stock                */
+
+  /* Neutrals derived from the palette rather than pure greys, so borders
+     and dividers sit in the same family as the brand. */
+  --color-line: #e2dccd; /* dividers, card borders on paper               */
+  --color-line-strong: #c9c0aa; /* input borders — 3:1 for UI (§20)       */
+  --color-muted: #6b6455; /* meta text, captions — 5.4:1 on paper         */
+
+  /* --- Type (§2.4) ------------------------------------------------------
+     Fraunces for display, Work Sans for body/UI, Hind Siliguri for Bangla.
+     Loaded via next/font in layout.tsx, which SELF-HOSTS them at build time
+     — this satisfies §2.4's "don't hotlink Google Fonts" (speed from BD +
+     the GDPR wrinkle); nothing is requested from Google at runtime.         */
+  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-work-sans), system-ui, -apple-system, sans-serif;
+  --font-bangla: var(--font-hind-siliguri), "Noto Sans Bengali", sans-serif;
+
+  /* 1.25 major third, 16px base (§2.4) */
+  --text-xs: 0.8rem; /* 12.8px — meta, captions, legal      */
+  --text-sm: 0.9rem; /* 14.4px — labels, helper text        */
+  --text-base: 1rem; /* 16px   — body                       */
+  --text-md: 1.25rem; /* 20px   — lead, product title in grid */
+  --text-lg: 1.563rem; /* 25px   — section headings          */
+  --text-xl: 1.953rem; /* 31px   — page titles               */
+  --text-2xl: 2.441rem; /* 39px   — hero on mobile           */
+  --text-3xl: 3.052rem; /* 49px   — hero on desktop          */
+
+  /* --- Radius (§2.5) ----------------------------------------------------
+     Deliberately differentiated. §2.5: putting the same radius on
+     everything is "the tell of a template". Product images stay square.   */
+  --radius-sm: 2px; /* inputs, badges          */
+  --radius-md: 4px; /* buttons, cards          */
+  --radius-lg: 8px; /* modals, image containers */
+  --radius-full: 999px; /* pills, avatars      */
+
+  /* --- Elevation (§2.5) ------------------------------------------------- */
+  --shadow-sm: 0 1px 2px rgba(20, 64, 31, 0.06);
+  --shadow-md: 0 4px 12px rgba(20, 64, 31, 0.08);
+  --shadow-lg: 0 12px 32px rgba(20, 64, 31, 0.12);
+
+  /* --- Layout (§2.6) ---------------------------------------------------- */
+  --container-page: 1280px; /* standard container      */
+  --container-prose: 1140px; /* prose-heavy pages      */
+
+  /* Breakpoints (§2.6) — sm 480 / md 768 / lg 1024 / xl 1280 */
+  --breakpoint-sm: 480px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+
+  /* --- Motion (§2.7) ----------------------------------------------------
+     150ms micro-feedback, 250ms panels, 400ms absolute ceiling.           */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-micro: 150ms;
+  --duration-panel: 250ms;
+  --duration-max: 400ms;
+}
+
+/* Spacing (§2.5): the plan's --space-1..10 scale (4/8/12/16/24/32/48/64/
+   96/128px) maps exactly onto Tailwind's default 0.25rem step, so
+   p-1 p-2 p-3 p-4 p-6 p-8 p-12 p-16 p-24 p-32 are the utilities to reach
+   for. Exposed as vars too, for use outside Tailwind. */
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+  --space-10: 128px;
+}
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+
+body {
+  background: var(--color-paper);
+  color: var(--color-forest);
+  font-family: var(--font-sans);
+  line-height: 1.6; /* §2.4 — 1.6 for sans */
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  line-height: 1.7; /* §2.4 — 1.7 for serif */
+  text-wrap: balance;
+  color: var(--color-forest);
+}
+
+/* Bangla needs more leading and a slightly larger size — Bengali glyphs
+   read smaller at the same px (§2.4, §22). */
+:lang(bn) {
+  font-family: var(--font-bangla);
+  line-height: 1.85;
+  font-size: 1.05em;
+}
+
+/* --- Focus (§20, §28) ----------------------------------------------------
+   Never removed. A visible indicator on every interactive element, in
+   --jute-deep so it reads against both paper and forest surfaces.          */
+:focus-visible {
+  outline: 2px solid var(--color-jute-deep);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* On dark (forest) surfaces the copper focus ring loses contrast, so it
+   flips to paper there. */
+.on-forest :focus-visible,
+.on-forest:focus-visible {
+  outline-color: var(--color-paper);
+}
+
+/* Prices align in grids (§2.4) */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Max line length for prose (§2.4) */
+.prose-measure {
+  max-width: 68ch;
+}
+
+/* Minimum tap target (§7.1, §20) */
+.tap-target {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* Skip-to-content — first focusable element on the page (§20) */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-forest);
+  color: var(--color-paper);
+  border-radius: 0 0 var(--radius-md) 0;
+}
+.skip-link:focus {
+  left: 0;
+}
+
+/* --- Reduced motion (§2.7, §20) ------------------------------------------
+   Transforms and animations are dropped; opacity changes are kept so
+   state changes remain perceivable.                                        */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-property: opacity, color, background-color, border-color !important;
+    transition-duration: var(--duration-micro) !important;
+    scroll-behavior: auto !important;
+  }
+}
