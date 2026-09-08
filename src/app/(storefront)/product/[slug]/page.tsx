@@ -16,6 +16,7 @@ import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 import { ProductGrid } from '@/components/commerce/product-grid';
 import { PurchasePanel } from '@/components/commerce/purchase-panel';
 import { MATERIAL_LABELS } from '@/components/commerce/catalog-filters';
+import { JsonLd } from '@/components/json-ld';
 
 /**
  * Product detail page — plan §6.3, "the most important page".
@@ -332,15 +333,8 @@ export default async function ProductPage({
         </section>
       )}
 
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          // JSON context, not HTML: JSON.stringify escapes quotes and
-          // backslashes, and escaping `<` makes a </script> breakout
-          // impossible. See src/components/ui/breadcrumbs.tsx.
-          __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c'),
-        }}
-      />
+      {/* Nonced so our CSP does not silently drop it (§13.1). */}
+      <JsonLd data={jsonLd} />
     </div>
   );
 }

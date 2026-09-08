@@ -1,4 +1,5 @@
 import { siteConfig, real } from '@/lib/site-config';
+import { JsonLd } from '@/components/json-ld';
 
 /**
  * Site-wide JSON-LD — plan §17.2.
@@ -12,19 +13,16 @@ import { siteConfig, real } from '@/lib/site-config';
  * regardless of who is reading.
  */
 
-/** Serialises safely into a <script> element. See ui/breadcrumbs.tsx. */
+/**
+ * All schemas go through <JsonLd>, which attaches the CSP nonce. A plain
+ * inline <script> here would be blocked by our policy and the structured data
+ * would silently vanish — see src/components/json-ld.tsx.
+ */
 function jsonLdScript(data: unknown) {
-  return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{
-        __html: JSON.stringify(data).replace(/</g, '\\u003c'),
-      }}
-    />
-  );
+  return <JsonLd data={data} />;
 }
 
-export function OrganizationSchema() {
+export async function OrganizationSchema() {
   // Only include social profiles that are actually filled in (§14.1 — a dead
   // link is worse than none, and that applies to `sameAs` too).
   const sameAs = [
@@ -81,7 +79,7 @@ export function OrganizationSchema() {
 }
 
 /** §17.2 — homepage only. */
-export function WebSiteSchema() {
+export async function WebSiteSchema() {
   return jsonLdScript({
     '@context': 'https://schema.org',
     '@type': 'WebSite',
@@ -107,7 +105,7 @@ export function WebSiteSchema() {
  * would be a false trust signal. It appears only on /contact, and only once a
  * real address is set.
  */
-export function LocalBusinessSchema() {
+export async function LocalBusinessSchema() {
   if (!real(siteConfig.address.line1)) return null;
 
   return jsonLdScript({
@@ -134,7 +132,7 @@ export function LocalBusinessSchema() {
 }
 
 /** §17.2 — FAQPage, emitted from the same data the page renders. */
-export function FaqSchema({
+export async function FaqSchema({
   items,
 }: {
   items: { question: string; answer: string }[];

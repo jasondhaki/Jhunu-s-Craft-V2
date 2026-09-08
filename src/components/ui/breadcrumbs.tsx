@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { siteConfig } from '@/lib/site-config';
+import { JsonLd } from '@/components/json-ld';
 
 /**
  * Breadcrumbs — plan §6.2, §6.3, and §17.2 (`BreadcrumbList` on all pages).
@@ -15,7 +16,7 @@ export interface Crumb {
   href?: string;
 }
 
-export function Breadcrumbs({ items }: { items: Crumb[] }) {
+export async function Breadcrumbs({ items }: { items: Crumb[] }) {
   const trail: Crumb[] = [{ label: 'Home', href: '/' }, ...items];
 
   // §17.2 — BreadcrumbList. Absolute URLs, per schema.org.
@@ -59,28 +60,9 @@ export function Breadcrumbs({ items }: { items: Crumb[] }) {
         </ol>
       </nav>
 
-      {/*
-        JSON-LD has to be injected as raw script content; React cannot render
-        it as a child. Labels here DO include admin-entered product names, so
-        this is not trusted input.
+      {/* Nonced so our CSP does not silently drop it (§13.1, §17.2). */}
+      <JsonLd data={jsonLd} />
 
-        The escaping below is the mitigation and it is sufficient for this
-        sink: JSON.stringify already escapes quotes and backslashes, and
-        replacing `<` with its < escape makes a `</script>` breakout
-        impossible — which is the only way to escape a script element's
-        content. The result is still valid JSON, since \uXXXX is legal in a
-        JSON string.
-
-        An HTML sanitiser would be the wrong tool here: this is a JSON
-        context, not an HTML one. What must never happen is interpolating a
-        value into this string without going through JSON.stringify (§13.4).
-      */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c'),
-        }}
-      />
     </>
   );
 }
