@@ -69,6 +69,22 @@ Confirmed facts now driving the copy:
 - The invented 24-product sample catalogue was deleted and replaced with the real products (see D10).
 - There is **no leather-only category**, because there is no leather-only product. A category leading to an empty grid is worse than an absent one.
 
+### D11 — External-store snapshots must be referentially stable, and testable outside React
+**Date:** 2026-09-08 · **Status:** locked · **Plan §23.1**
+
+A live crash prompted this, so it is a rule rather than a note.
+
+Accepting cookies killed the page. `useSyncExternalStore` compares snapshots with `Object.is`, and `readConsent()` ran `JSON.parse` on every call — returning a new object identity each time. React concluded the store had changed on every render and re-rendered until the browser killed the tab.
+
+**Why every safeguard missed it.** With nothing stored the function returned `null`, and `Object.is(null, null)` is true. So it was perfectly stable in a fresh profile, in `curl`, in server-side rendering, and in all 82 tests. It only became unstable **after** a visitor accepted — and because the choice persists in `localStorage`, every later visit crashed too. The first symptom reached us as "the page doesn't load", which sent the investigation towards DNS, CSP, and hosting regions before the real cause surfaced.
+
+**Two rules from it:**
+
+1. **Any `getSnapshot` passed to `useSyncExternalStore` must return a referentially stable value** when the underlying source has not changed. Primitives are safe; anything parsed or constructed must be cached against its raw input. Audited at the time: the cart count returns a number and the WhatsApp button a boolean, so consent was the only offender.
+2. **Logic that can only run inside a renderer cannot be tested, and will eventually break in production.** The consent store moved to `src/lib/consent-store.ts` — no React, no `'use client'` — exactly as the Argon2 parameters moved to `src/lib/password.ts` for the same reason. `scripts/test-consent.ts` now asserts snapshot stability directly, and fails against the old implementation.
+
+**A process note worth keeping:** three plausible-but-wrong causes were investigated first (hosting region, CSP, network). What settled it was the observation that **Vercel's logs contained no request from the browser at all** — the failure was client-side, not server-side. Checking whether the request even arrived should come earlier next time.
+
 ### D10 — Real products ship as DRAFT unless the price is known
 **Date:** 2026-09-08 · **Status:** locked · **Plan §14.5**
 
@@ -171,18 +187,18 @@ Accepted for now because correct pricing beats cache hit rate, and the pages are
 
 Left as-is rather than guessed at, because the right choice depends on real traffic mix, which we do not have yet.
 
-### D8 — Positioning rests on "one named person", not on years of experience
-**Date:** 2026-09-08 · **Status:** locked · **Plan §1.1, §1.4, §14.5**
+### D8 — Positioning rests on "one named person" — ⚠ **SUPERSEDED BY D9**
+**Date:** 2026-09-08 · **Status:** ~~locked~~ **superseded by D9 the same day** · **Plan §1.1, §1.4, §14.5**
 
-The owner confirmed the maker has been making bags for **3 years**. The plan's own example copy in §1.4 is "He's been making bags for 22 years", which invited a heritage angle that would now be false.
+> **Do not act on the struck-through part of this decision.** Its second clause was factually wrong and the site was corrected. Kept per the rule in `CLAUDE.md` that superseded decisions are marked, never deleted — and because the mistake is instructive.
 
-**Decision: state three years plainly and lean the positioning on §1.1's actual advantage** — that every bag is made by one named person, by hand, which is true regardless of tenure and is the thing large retailers genuinely cannot claim.
+The owner confirmed the founder has been making bags for **3 years**. The plan's own example copy in §1.4 is "He's been making bags for 22 years", which invited a heritage angle that would be false here.
 
-What this rules out, deliberately:
-- Vague time language designed to imply more ("years of experience", "long-established", "traditional craft passed down"). §14.5 treats that as a dark pattern and §1.4 demands specific over superlative.
-- Any "heritage" or "generations" framing on the About page when it is written.
+**Still in force:** state three years plainly, and rule out vague time language designed to imply more ("years of experience", "long-established", "traditional craft passed down", "generations"). §14.5 treats that as a dark pattern and §1.4 demands specific over superlative. Also still in force: describing the *work* in detail — technique, materials, why a step is slow — is where credibility actually comes from.
 
-What it does not rule out: describing the *work* in detail — technique, materials, why a step is slow. That is honest, specific, and is where the credibility actually comes from.
+**~~Superseded:~~** this decision went on to lean the positioning on "every bag is made by one named person, by hand". That is **not true of this business** — it is a workshop of 10–20 people. See **D9**, which replaced it a few hours later.
+
+**The lesson worth keeping:** D8 took the plan's §1.1 premise as established fact and built a decision on top of it, rather than checking it against the business. A spec is a set of assumptions until the owner confirms each one.
 
 ---
 
@@ -321,6 +337,22 @@ Newest last. Every action Claude takes on this project is recorded here.
 | 100 | Built review moderation (§11.4) | Approve, reject, reply publicly. The screen states §14.3's editorial rule where the decision is actually made: publish the critical ones, reject only spam and abuse — a wall of five stars reads as fake. Every action audited. |
 | 101 | Star input is a real radio group | Keyboard-operable, announced as "3 of 5 stars", works without JavaScript. A row of clickable icons gives none of that (§20). |
 | 102 | Added `/api/health` (§24) | For the uptime monitoring §24 asks for. Returns 503 when the database is unreachable so a monitor needs no body parsing, and deliberately reveals nothing useful to a stranger — no versions, no connection details. Email being unconfigured is reported but does not fail the check: it is a launch blocker (R6), not an outage. |
+| 103 | ⚠ **Owner correction: the positioning was wrong** | The owner said his father is the head and founder, but not the only maker — there is a team of 10–20. The plan's §1.1 premise ("one person, one bench") had been taken as fact and built on. Locked as **D9**; **D8 marked superseded**. |
+| 104 | Audited and fixed 16 false claims across 7 files | "Every bag is made by one pair of hands", "Handmade by one person", "one person, one bench", and similar. Each was replaced with what is actually true — a founder who leads a workshop — not softened. Grep-verified that no variant survives. |
+| 105 | Rewrote `/wholesale` completely | It had said bulk orders were impossible because one person cannot make them. That was the exact opposite of the truth and would have turned away the business the workshop is best placed to win. It now states real capacity, names the B2B clients the owner listed, and invites enquiries. |
+| 106 | Wired in the owner's 14 photographs | Dropped into `public/` with random filenames. Renamed descriptively, sorted by product, and mapped to the catalogue. Alt text written for each from what is actually visible in the frame, in both languages (§5.3, §20) — never generated from the filename. |
+| 107 | Deleted the 24 invented products | They were placeholder inventions from before real photos existed. Keeping them would have meant a shop selling bags that do not exist — the §14.5 line, not a content problem. |
+| 108 | Rebuilt the catalogue from the photographs (`prisma/seed-real.ts`) | 4 real products. **1 ACTIVE** (Canvas School Backpack, ৳740 — read off the handwritten tag in the photo). **3 DRAFT** because no price is known for them: Jute and Leather Office Bag, Natural Jute Side Bag, Nakshi Panel Backpack. Locked as **D10**. |
+| 109 | Migration: added `COTTON` to the `Material` enum | The photos show cotton-canvas bags, which the enum could not express. `JUTE \| LEATHER \| COTTON \| MIXED`. |
+| 110 | ⚠ **Found the site running on the wrong continent** | `x-vercel-id: bom1::iad1` — functions were executing in Washington DC while the database sits in Singapore. Every query crossed the Pacific twice. 4.3 s cold, 1.4 s warm. |
+| 111 | Pinned functions to `sin1` (`vercel.json`) | Same region as the Neon database. **1.4 s → 254 ms warm.** Nothing in the application code changed; it was pure geography. Logged as §19. |
+| 112 | ⚠ **Owner-reported crash: accepting cookies killed the page** | Diagnosed to `readConsent()` running `JSON.parse` on every call, so `useSyncExternalStore` saw a new object identity each render and looped until the browser killed the tab. Invisible in 82 prior tests because with nothing stored it returns `null`, and `Object.is(null, null)` is true. |
+| 113 | Fixed it, and moved the logic out of React | New `src/lib/consent-store.ts` — no React, no `'use client'` — caching the parsed value against the raw string so the snapshot is referentially stable. Same reasoning that produced `src/lib/password.ts`. Locked as **D11**. |
+| 114 | Added `scripts/test-consent.ts` — 14 tests | The headline test asserts snapshot stability directly and **fails against the old implementation**. Also covers corrupt storage re-asking rather than assuming consent (§13.8). Total suite now **96 tests**. |
+| 115 | Audited every other `useSyncExternalStore` call | Cart count returns a number, WhatsApp availability a boolean — both primitives, both stable. Consent was the only offender. |
+| 116 | Diagnostic note worth keeping | Three plausible causes were investigated first (hosting region, CSP, DNS). What settled it was noticing **Vercel's logs held no request from the browser at all** — so the failure was client-side. "Did the request even arrive?" belongs earlier in the sequence. |
+| 117 | Postgres SSL: `require` → `verify-full` | The driver was logging an SSL warning at `error` level on every request. Behaviourally identical today, but `pg` v9 will downgrade `require` to weaker libpq semantics, so this is the setting that stays correct. Changed in `.env` and in all 6 Vercel environment variables (pooled + direct × production/preview/development). |
+| 118 | Verified both connections after the change | POOLED and DIRECT both connect; the warning is gone. |
 
 ---
 
@@ -384,6 +416,8 @@ Carried from the plan; violated at the project's peril. These are the ones easie
 13. **Mobile-first, 375px built first** (§2.6). Most traffic is Android on mobile data.
 14. **No carousel hero** (§6.1, §28).
 15. **Server-render everything customer-facing** (§17.1).
+16. **A `getSnapshot` must be referentially stable** (D11). Parsed or constructed values must be cached against their raw input, or `useSyncExternalStore` loops forever. Store logic lives outside React so it can be tested.
+17. **Never state a fact about the workshop the owner has not confirmed** (D9). The plan is a set of assumptions until he says otherwise. This one shipped 16 false claims before it was caught.
 
 ---
 
