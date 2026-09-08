@@ -161,11 +161,16 @@ export default async function HomePage() {
             <h2 className="font-display text-lg font-semibold md:text-xl">
               Meet {makerName}
             </h2>
+            {/* §1.4 — plain, warm, first-person, and specific rather than
+                superlative. Three years is stated as the fact it is; §14.5
+                rules out implying more heritage than actually exists. */}
             <p className="prose-measure text-forest-soft mt-4">
-              Every bag on this site is cut, stitched, and finished by one
-              person{makerLocation ? ` in ${makerLocation}` : ''}. Nothing is
-              outsourced and nothing is mass-produced, which is why stock is
-              limited and why no two bags come out quite the same.
+              {makerName} has been making bags by hand for{' '}
+              {siteConfig.maker.yearsOfExperience} years
+              {makerLocation ? `, in a small workshop in ${makerLocation}` : ''}.
+              Every bag on this site is cut, stitched, and finished by him.
+              Nothing is outsourced and nothing is mass-produced, which is why
+              stock is limited and why no two bags come out quite the same.
             </p>
             <p className="mt-6">
               <Link

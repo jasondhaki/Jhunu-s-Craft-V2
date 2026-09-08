@@ -5,15 +5,16 @@ import {
   WhatsAppIcon,
   PinterestIcon,
 } from '@/components/ui/social-icons';
-import { siteConfig, real } from '@/lib/site-config';
+import { siteConfig, real, whatsappUrl } from '@/lib/site-config';
 
 /**
  * Site footer — plan §3.3. Four columns plus a bottom bar.
  *
  * §3.3: "Include the full physical address and a working phone number in the
- * footer. Nothing signals 'real business' harder, in either market." Those
- * are placeholders today (CONTEXT.md Q3) and are omitted rather than
- * rendered as [PHONE_NUMBER] — a visible placeholder is worse than nothing.
+ * footer. Nothing signals 'real business' harder, in either market." Both are
+ * now real. Anything still unknown (social links, email) is dropped from the
+ * render rather than shown as [PLACEHOLDER] — and §14.1 is explicit that a
+ * dead social link is worse than no link at all.
  */
 
 const columns = [
@@ -65,7 +66,14 @@ const socials = [
   { key: 'facebook', href: siteConfig.social.facebook, label: 'Facebook', Icon: FacebookIcon },
   { key: 'instagram', href: siteConfig.social.instagram, label: 'Instagram', Icon: InstagramIcon },
   { key: 'pinterest', href: siteConfig.social.pinterest, label: 'Pinterest', Icon: PinterestIcon },
-  { key: 'whatsapp', href: siteConfig.contact.whatsapp, label: 'WhatsApp', Icon: WhatsAppIcon },
+  {
+    key: 'whatsapp',
+    // Must be a wa.me URL, not the raw number — see whatsappUrl(). An empty
+    // string here falls through the `real()` filter below and is dropped.
+    href: whatsappUrl('Hello — I have a question about a bag.') ?? '',
+    label: 'WhatsApp',
+    Icon: WhatsAppIcon,
+  },
 ] as const;
 
 export function SiteFooter() {

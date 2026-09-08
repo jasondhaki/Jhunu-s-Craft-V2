@@ -33,15 +33,17 @@ export const siteConfig = {
    */
   maker: {
     name: 'James Dilip Dhaki',
+    /** His own spelling, supplied by the owner — not transliterated (§22). */
+    nameBn: 'জেমস দিলিপ ঢাকি',
     /**
-     * A person's own spelling of their name is theirs to choose, and §22
-     * forbids machine translation. Left blank until he confirms how he
-     * writes it in Bangla — CONTEXT.md Q11.
+     * §1.4 wants specific over superlative. Three years is the real number,
+     * and it is stated plainly rather than dressed up — §14.5 rules out
+     * implying more heritage than exists, and §1.1's advantage is that one
+     * named person makes every bag, not that he has done it for decades.
      */
-    nameBn: '[MAKER_NAME_BN]',
-    /** §1.4: "He's been making bags for 22 years" — specific, not superlative. */
-    yearsOfExperience: '[YEARS_EXPERIENCE]',
+    yearsOfExperience: 3,
     location: 'Monipuripara, Tejgaon, Dhaka',
+    /** Place names in Bangla — not guessed, see CONTEXT.md Q14. */
     locationBn: '[WORKSHOP_LOCATION_BN]',
   },
 
@@ -56,12 +58,11 @@ export const siteConfig = {
     /** Human-readable, for display. */
     phoneDisplay: '+880 1730 431932',
     /**
-     * §14.1 wants a WhatsApp click-to-chat button, but a wa.me link to a
-     * number that isn't on WhatsApp is a broken trust signal — worse than
-     * no button. Left unset until confirmed (CONTEXT.md Q12); the button is
-     * simply not rendered meanwhile.
+     * Same number as the phone line, confirmed by the owner. Stored in E.164
+     * without the `+`, which is the format wa.me expects — use
+     * `whatsappUrl()` below rather than building the link by hand.
      */
-    whatsapp: '[WHATSAPP_NUMBER]',
+    whatsapp: '8801730431932',
     email: '[CONTACT_EMAIL]',
     ordersEmail: '[ORDERS_EMAIL]',
     /** §14.4 — a visible response-time promise. */
@@ -170,4 +171,27 @@ export function placeholdersRemaining(
 /** Renders a value only when it is real, so no page ever shows [MAKER_NAME]. */
 export function real(value: string, fallback = ''): string {
   return IS_PLACEHOLDER(value) ? fallback : value;
+}
+
+/**
+ * Click-to-chat URL for WhatsApp (§14.1 — "huge in Bangladesh, increasingly
+ * normal internationally").
+ *
+ * wa.me expects the number in E.164 with no `+`, spaces, or dashes; anything
+ * else silently produces a dead link. Returns null when the number is still a
+ * placeholder, so callers omit the button entirely rather than rendering one
+ * that goes nowhere — §14.1 is explicit that a dead link is worse than none.
+ *
+ * `text` pre-fills the customer's first message, which measurably raises the
+ * chance they actually send it.
+ */
+export function whatsappUrl(text?: string): string | null {
+  const number = siteConfig.contact.whatsapp;
+  if (IS_PLACEHOLDER(number)) return null;
+
+  const digits = number.replace(/\D/g, '');
+  if (!digits) return null;
+
+  const query = text ? `?text=${encodeURIComponent(text)}` : '';
+  return `https://wa.me/${digits}${query}`;
 }

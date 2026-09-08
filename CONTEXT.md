@@ -12,11 +12,25 @@ An ecommerce site for **Jhunu's Crafts** — a one-maker family workshop in Bang
 
 - **Repo:** https://github.com/jasondhaki/Jhunu-s-Craft-V2 (auto-deploys on push to `main`)
 - **Live:** https://jhunus-crafts.vercel.app
-- **Database:** Neon Postgres 18.6, `ap-southeast-1`. ⚠ The password was shared in chat — rotate before launch (Q9).
+- **Database:** Neon Postgres 18.6, `ap-southeast-1`, 33 tables. ⚠ Password rotation outstanding — see **R1** in §1b.
 - **Spec:** `ecommerce-master-plan.md` — 28 sections, treated as the source of truth. Section numbers are cited throughout this file as `§n`.
 - **Hosting:** Vercel (temporary, per the owner's instruction).
 - **Markets:** Bangladesh (primary — BDT, COD-heavy) + international (secondary — USD, card, courier).
 - **Core positioning (§1.1):** every bag is made by one named person, by hand. Every design and copy decision reinforces that.
+
+---
+
+## 1b. ⚠ Must be done before launch
+
+Standing risks that are accepted *for now* and must not reach production unresolved. Each is also on the §25 pre-launch checklist.
+
+| # | Item | Why it matters | Status |
+|---|---|---|---|
+| **R1** | **Rotate the Neon database password.** | The current password was shared in a chat transcript, so it must be treated as compromised — §13.7: "Rotate credentials if anything is ever committed — assume it's compromised." It grants full read/write to every customer, order, and address record. | **Deferred by owner (2026-09-08), deliberately.** Rotate in the Neon console, then update `.env` and all three Vercel environments. |
+| **R2** | **Enable admin 2FA.** | §13.2 calls TOTP "the single highest-value security control on the whole site" and makes it mandatory on admin accounts. The schema, session gate, and `ADMIN_2FA_ENFORCED` switch exist; the enrolment flow does not. | Phase 3. The admin panel shows a standing red warning until it is on. |
+| **R3** | **Replace every placeholder photograph.** | §28: stock or borrowed images are "instantly detectable, instantly fatal to trust". All 144 image records currently point at `photo-pending.svg`. | Blocked on Q6. |
+| **R4** | **Replace the temporary admin password.** | Generated during setup and shown in a chat transcript. | Run `npm run admin:create`. |
+| **R5** | **Legal review of the policy pages.** | §15 — a Bangladeshi lawyer should review the terms and refund policy before launch. | Phase 4. |
 
 ---
 
@@ -109,6 +123,19 @@ Accepted for now because correct pricing beats cache hit rate, and the pages are
 
 Left as-is rather than guessed at, because the right choice depends on real traffic mix, which we do not have yet.
 
+### D8 — Positioning rests on "one named person", not on years of experience
+**Date:** 2026-09-08 · **Status:** locked · **Plan §1.1, §1.4, §14.5**
+
+The owner confirmed the maker has been making bags for **3 years**. The plan's own example copy in §1.4 is "He's been making bags for 22 years", which invited a heritage angle that would now be false.
+
+**Decision: state three years plainly and lean the positioning on §1.1's actual advantage** — that every bag is made by one named person, by hand, which is true regardless of tenure and is the thing large retailers genuinely cannot claim.
+
+What this rules out, deliberately:
+- Vague time language designed to imply more ("years of experience", "long-established", "traditional craft passed down"). §14.5 treats that as a dark pattern and §1.4 demands specific over superlative.
+- Any "heritage" or "generations" framing on the About page when it is written.
+
+What it does not rule out: describing the *work* in detail — technique, materials, why a step is slow. That is honest, specific, and is where the credibility actually comes from.
+
 ---
 
 ## 3. Action log
@@ -177,6 +204,12 @@ Newest last. Every action Claude takes on this project is recorded here.
 | 51 | Wrote `src/lib/inventory.ts` | The D1 mitigation made real: `decrementStock` is a conditional `updateMany` (`WHERE stockQuantity >= n`) inside a transaction, so a race matches zero rows and fails cleanly instead of overselling. Every movement writes a `StockMovement` row so levels stay reconstructable. |
 | 52 | Fixed a broken admin-creation script | The script exited 0 having done nothing when the password was piped in: the first `readline` buffered **both** lines, so the second `question` never fired and the event loop simply drained. Now reads stdin in one pass when not a TTY. The role validation had also correctly rejected a shell-mangled argument earlier — that part worked as designed. |
 | 53 | Verified admin auth against the running app | 17 checks: unauthenticated redirects on 4 routes, forged token rejected, session cookie flags, token entropy, and — confirmed separately — that a wrong password and a nonexistent account produce **byte-identical** responses, so accounts cannot be enumerated (§13.2). All pass. |
+| 54 | Owner supplied the remaining details | Bangla name জেমস দিলিপ ঢাকি, 3 years making bags, WhatsApp same as the phone. Closed Q11–Q13; raised Q14 (Bangla place names, not guessed). |
+| 55 | Recorded D8 on positioning | Three years is real but short, and §1.4's own example copy ("22 years") invited a heritage angle that would now be false. Locked the positioning onto §1.1's actual advantage — one named person, by hand — and explicitly ruled out vague time language that implies more (§14.5). |
+| 56 | Added  | Caught before shipping: the footer was about to render the raw phone number as an , which would have produced a dead link — exactly the broken trust signal §14.1 warns is worse than no button. Helper builds a proper  URL and returns null while the number is a placeholder. |
+| 57 | Built the floating WhatsApp button | §14.1, dismissible per §14.5 with a real 44px close control and persistent dismissal. |
+| 58 | Hit a React 19 lint rule |  rejected the effect-plus-setState pattern for reading localStorage. Rewrote with , which is the correct hook for an external store and gives a defined server snapshot — so a dismissed button never flashes back in on hydration. |
+| 59 | Added §1b to this file | Five must-do-before-launch risks (R1–R5) promoted out of the buried question table, since the Neon rotation was deliberately deferred and must not be lost. |
 
 ---
 
@@ -209,11 +242,12 @@ Blocking items are marked. Unblocked ones are being built around with clearly-ma
 | Q6 | **Real product photos** | §21 — "will make or break this site more than any code decision". §28: stock photos are instantly fatal to trust. Photo slots are marked placeholders, never stock imagery. | No — blocks launch |
 | Q7 | **Payment gateway account** — SSLCommerz / aamarPay / ShurjoPay? | §8.1. Determines the first `PaymentProvider` adapter. COD works without it. | No — blocks Phase 3 |
 | Q8 | **International payment acceptance** — unresolved in §8.2 | Plan flags this as the one thing that could change the plan structurally. Stripe/PayPal do not support BD merchants. Needs confirmation with the owner's bank + gateway. | No — blocks international sales only |
-| ~~Q9~~ | ~~Neon `DATABASE_URL`~~ | **ANSWERED 2026-09-08.** Neon `ap-southeast-1`, Postgres 18.6. Migration applied, 31 tables live. ⚠ The password was shared in chat — rotate it in the Neon console before launch. | — |
+| ~~Q9~~ | ~~Neon `DATABASE_URL`~~ | **ANSWERED 2026-09-08.** Neon `ap-southeast-1`, Postgres 18.6, 33 tables live. Password rotation deferred by the owner — tracked as **R1** in §1b. | — |
 | Q10 | **Bangla copy** | §22 forbids machine translation — it "undermines the handmade authenticity". Bangla fields exist in the schema but must be written by a human. | No — blocks bilingual launch |
-| Q11 | **How James Dilip Dhaki writes his name in Bangla** | PDP maker credit and About page in the Bangla locale. A person's own spelling is theirs to choose — transliterating it automatically is exactly the §22 failure mode. Currently `[MAKER_NAME_BN]`. | No — blocks bilingual launch |
-| Q12 | **WhatsApp number** — same as the phone, or different? | §14.1 wants a click-to-chat button. A `wa.me` link to a number not registered on WhatsApp is a broken trust signal, worse than no button — so it is not rendered until confirmed. | No |
-| Q13 | **How long he has been making bags** | §1.4 wants specificity over superlative — "he's been making bags for 22 years" beats "years of experience". Used on the homepage maker strip and About page. | No |
+| ~~Q11~~ | ~~His name in Bangla~~ | **ANSWERED 2026-09-08: জেমস দিলিপ ঢাকি** — his own spelling, supplied by the owner rather than transliterated. | — |
+| ~~Q12~~ | ~~WhatsApp number~~ | **ANSWERED 2026-09-08: same as the phone line.** Floating click-to-chat button now live (§14.1), dismissible per §14.5. | — |
+| ~~Q13~~ | ~~How long he has been making bags~~ | **ANSWERED 2026-09-08: 3 years.** Stated plainly on the homepage. See D8 for why the copy was NOT rewritten to imply more heritage than exists. | — |
+| Q14 | **Bangla spelling of the workshop location** (Monipuripara, Tejgaon, Dhaka) | Used in the Bangla locale only. Standard place names, but §22 rules out guessing — asked rather than transliterated. | No — blocks bilingual launch only |
 
 ---
 
