@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ProsePage, ProseSection, P } from '@/components/prose-page';
 import { buttonClasses } from '@/components/ui/button';
 import { siteConfig, real } from '@/lib/site-config';
@@ -26,7 +27,7 @@ import { siteConfig, real } from '@/lib/site-config';
 export const metadata: Metadata = {
   title: 'Our story',
   description:
-    'Who makes these bags, where, and how. One person, by hand, in a small workshop in Dhaka.',
+    'Who makes these bags, where, and how. A workshop of ten to twenty people in Dhaka, founded and run by James Dilip Dhaki.',
   alternates: { canonical: '/about' },
 };
 
@@ -38,31 +39,42 @@ export default function AboutPage() {
   return (
     <ProsePage
       title={`Made by ${maker}`}
-      intro={`Every bag on this site is cut, stitched, and finished by one person${location ? `, in a small workshop in ${location}` : ''}.`}
+      intro={`A workshop of ten to twenty people${location ? ` in ${location}` : ''}, founded and run by ${maker}.`}
       crumbs={[{ label: 'Our story' }]}
     >
-      {/* §6.8 — "Opening portrait of your father, full-bleed." */}
-      <div
-        className="border-line bg-paper-sunk -mx-4 flex aspect-4/3 items-center justify-center border-y sm:mx-0 sm:rounded-lg sm:border"
-        role="img"
-        aria-label={`Portrait of ${maker} at work, coming soon`}
-      >
-        <p className="text-muted max-w-64 p-6 text-center text-sm">
-          A portrait of {maker} at work goes here. We do not use stock
-          photography, so this space stays empty until the real one exists.
-        </p>
-      </div>
+      {/* §6.8 asks for a portrait of the founder. We do not have one yet, so
+          this is the workshop itself — which is arguably the more honest
+          opening image for a business whose correction was "it is a team, not
+          one man". A portrait can replace it when one exists. */}
+      <figure className="-mx-4 sm:mx-0">
+        <Image
+          src="/Employees at work.jpeg"
+          alt="The workshop floor: around eight people working at rows of blue industrial sewing machines, with finished bags stacked in the foreground"
+          width={1280}
+          height={960}
+          priority
+          sizes="(min-width: 1140px) 1140px, 100vw"
+          className="aspect-4/3 w-full object-cover sm:rounded-lg"
+        />
+        <figcaption className="text-muted mt-2 px-4 text-xs sm:px-0">
+          The workshop in {location || 'Dhaka'}.
+        </figcaption>
+      </figure>
 
       <ProseSection heading="What this is">
         <P>
-          {maker} has been making bags by hand for {years} years. Not a
-          workshop with staff, and not a factory — one person, one bench, and
-          a small number of bags at a time.
+          {maker} founded this workshop {years} years ago and still runs it. He
+          does not make every bag himself — a team of ten to twenty people
+          does, on industrial machines, in our own premises in{' '}
+          {location || 'Dhaka'}.
         </P>
         <P>
-          That is the whole proposition, and it is the one thing a large
-          retailer cannot copy. It is also why stock runs out, why some pieces
-          are made to order, and why no two bags are quite identical.
+          That distinction matters, so we would rather state it than let a
+          photograph imply otherwise. This is not one craftsman at a bench, and
+          it is not an anonymous factory taking whatever order comes in. It is
+          a small workshop where the person whose name is on the door is in the
+          building, and where the people cutting and stitching are employed by
+          us rather than subcontracted out.
         </P>
       </ProseSection>
 
@@ -79,6 +91,21 @@ export default function AboutPage() {
           our mixed pieces is stitched <em>through</em> the jute rather than
           glued to it — which is why the handles do not come away.
         </P>
+        <figure>
+          <Image
+            src="/sewers at work.jpeg"
+            alt="A woman stitching a printed panel at an industrial sewing machine, with a stack of cut panels beside her"
+            width={1200}
+            height={1600}
+            loading="lazy"
+            sizes="(min-width: 768px) 560px, 100vw"
+            className="border-line rounded-md border object-cover"
+          />
+          <figcaption className="text-muted mt-2 text-xs">
+            Cut panels going through the machine.
+          </figcaption>
+        </figure>
+
         <P>
           <Link
             href="/about/process"
@@ -125,9 +152,11 @@ export default function AboutPage() {
 
       <ProseSection heading="Why we are online now">
         <P>
-          Because good work made by one person is hard to find unless you
-          already know where to look. A website is simply a way for the bags to
-          reach people who would want them.
+          Most of our work has been bulk orders — promotional totes, school
+          bags, branded bags for organisations. Those are made to someone
+          else&rsquo;s brief and carry someone else&rsquo;s logo. Selling
+          directly is how the workshop&rsquo;s own designs reach people who
+          would want them.
         </P>
       </ProseSection>
 

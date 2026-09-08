@@ -57,7 +57,7 @@ export const FAQ_GROUPS: FaqGroup[] = [
       {
         question: 'The bag I want is sold out. Will it come back?',
         answer:
-          'Usually, but not on a fixed schedule — everything is made by one person, a few at a time. Call or message us and we can tell you roughly when, or make one for you.',
+          'Usually, but not on a fixed schedule — our own designs are made in small runs between bulk orders. Call or message us and we can tell you roughly when the next run is, or make one for you.',
       },
     ],
   },
@@ -199,7 +199,7 @@ export const FAQ_GROUPS: FaqGroup[] = [
       {
         question: 'Do you sell wholesale to shops?',
         answer:
-          'Yes, in small quantities. Everything is made by one person, so lead times are longer than a factory’s and we would rather be honest about that up front than miss a deadline. Get in touch with what you have in mind.',
+          'Yes — bulk work is most of what the workshop does. We make promotional totes, school bags, and branded bags for companies, schools, and development organisations, including Swisscontact and B-SETS. Tell us quantities and a deadline and we will give you a straight answer.',
       },
       {
         question: 'Can you make a large matching order for an event?',

@@ -316,7 +316,7 @@ export default async function ProductPage({
 
           {/* Trust row (§6.3.11) */}
           <ul className="border-line text-muted mt-8 grid grid-cols-2 gap-4 border-t pt-6 text-xs">
-            <TrustItem Icon={Hand}>Handmade by one person</TrustItem>
+            <TrustItem Icon={Hand}>Made in our own workshop</TrustItem>
             <TrustItem Icon={Truck}>
               Free delivery in Dhaka over{' '}
               {formatMoney(siteConfig.freeShippingThreshold.BDT, 'BDT')}

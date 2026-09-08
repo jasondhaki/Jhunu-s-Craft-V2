@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Hand, Leaf, Globe, RotateCcw } from 'lucide-react';
 import { buttonClasses } from '@/components/ui/button';
 import { ProductGrid } from '@/components/commerce/product-grid';
@@ -20,16 +21,21 @@ import { siteConfig, real } from '@/lib/site-config';
  * there are no real reviews yet, and §14.3 forbids inventing them.
  */
 
+/**
+ * Categories reflect what the workshop actually makes (CONTEXT.md D9).
+ * There is no leather-only line, so there is no leather-only category —
+ * a category that leads to an empty grid is worse than one that is absent.
+ */
 const categories = [
-  { href: '/shop/jute', label: 'Jute', blurb: 'Natural fibre, light, and made to be used every day.' },
-  { href: '/shop/leather', label: 'Leather', blurb: 'Full-grain hide that gets better the longer you carry it.' },
-  { href: '/shop/mixed', label: 'Jute + leather', blurb: 'A jute body with leather straps and trim.' },
-  { href: '/collections/under-2000-taka', label: 'Under ৳2,000', blurb: 'Handmade does not have to be expensive.' },
+  { href: '/shop/canvas', label: 'Canvas backpacks', blurb: 'Hard-wearing cotton canvas, built for a school run or a commute.' },
+  { href: '/shop/jute', label: 'Jute', blurb: 'Light, strong, and grown here in Bangladesh.' },
+  { href: '/shop/mixed', label: 'Jute + leather', blurb: 'A jute body with leather trim, corners and handles.' },
+  { href: '/wholesale', label: 'Bulk orders', blurb: 'Branded bags in quantity, for schools, companies and programmes.' },
 ] as const;
 
 // §6.1.7 — four short value points, one line each.
 const valuePoints = [
-  { Icon: Hand, label: 'Handmade by one person' },
+  { Icon: Hand, label: 'Made in our own workshop' },
   { Icon: Leaf, label: 'Natural jute & full-grain leather' },
   { Icon: Globe, label: 'Ships worldwide' },
   { Icon: RotateCcw, label: `${siteConfig.promises.returnWindowDays}-day easy return` },
@@ -49,29 +55,28 @@ export default async function HomePage() {
     getCurrency(),
   ]);
 
-  const makerName = real(siteConfig.maker.name, 'one maker');
+  const makerName = real(siteConfig.maker.name, 'our founder');
   const makerLocation = real(siteConfig.maker.location);
 
   return (
     <>
       {/* ------------------------------------------------------------------
-          Hero (§6.1.3). The photograph is the LCP element — once real
-          photography exists (CONTEXT.md Q6) it goes here as a preloaded,
-          eagerly-loaded AVIF/WebP with explicit dimensions (§19). §28 forbids
-          stock imagery, so there is no placeholder photo: a typographic hero
-          on the brand's forest ground instead.
+          Hero (§6.1.3). The photograph is the LCP element, so it is priority
+          and never lazy-loaded, with explicit dimensions to prevent layout
+          shift (§19). Our own photograph of our own bags — §28 forbids stock
+          imagery and this is the page where it would matter most.
          ------------------------------------------------------------------ */}
       <section className="on-forest bg-forest text-paper">
         <div className="mx-auto grid max-w-(--container-page) gap-10 px-4 py-16 md:grid-cols-2 md:items-center md:py-24">
           <div>
             {/* Max 8 words (§6.1.3) */}
             <h1 className="font-display text-2xl leading-tight font-semibold text-balance md:text-3xl">
-              Every bag made by one pair of hands
+              Jute and canvas bags, made in Dhaka
             </h1>
             <p className="text-paper/85 prose-measure mt-5 text-base md:text-md">
-              Jute and leather bags cut, stitched, and finished in a small
-              workshop in Bangladesh — no factory, no shortcuts, and no two
-              bags exactly alike.
+              Cut, stitched, and finished in our own workshop in Dhaka by a
+              team of ten to twenty people — including bulk orders for schools,
+              companies, and development organisations.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-5">
               {/* The single primary action on this screen (§2.3). A real
@@ -88,15 +93,15 @@ export default async function HomePage() {
             </div>
           </div>
 
-          <div
-            className="border-forest-soft bg-forest-soft/40 flex aspect-4/3 items-center justify-center rounded-lg border border-dashed"
-            role="img"
-            aria-label="Hero photograph pending"
-          >
-            <p className="text-paper/60 max-w-56 p-6 text-center text-xs">
-              Hero photograph goes here — CONTEXT.md Q6. No stock imagery (§28).
-            </p>
-          </div>
+          <Image
+            src="/finished products.jpeg"
+            alt="Finished jute briefcases with dark leather trim and handles, arranged against a white backdrop"
+            width={1600}
+            height={1200}
+            priority
+            sizes="(min-width: 768px) 50vw, 100vw"
+            className="aspect-4/3 rounded-lg object-cover"
+          />
         </div>
       </section>
 
@@ -148,29 +153,29 @@ export default async function HomePage() {
       {/* The maker strip (§6.1.6) — "give it real space" */}
       <section className="bg-paper-sunk">
         <div className="mx-auto grid max-w-(--container-page) gap-10 px-4 py-16 md:grid-cols-2 md:items-center md:py-20">
-          <div
-            className="border-line bg-paper flex aspect-4/3 items-center justify-center rounded-lg border border-dashed"
-            role="img"
-            aria-label="Photograph of the maker at work, pending"
-          >
-            <p className="text-muted max-w-56 p-6 text-center text-xs">
-              Photograph of {makerName} at work — CONTEXT.md Q6.
-            </p>
-          </div>
+          <Image
+            src="/Employees at work.jpeg"
+            alt="Workers at rows of blue industrial sewing machines assembling bags in the workshop"
+            width={1280}
+            height={960}
+            loading="lazy"
+            sizes="(min-width: 768px) 50vw, 100vw"
+            className="aspect-4/3 rounded-lg object-cover"
+          />
           <div>
             <h2 className="font-display text-lg font-semibold md:text-xl">
               Meet {makerName}
             </h2>
-            {/* §1.4 — plain, warm, first-person, and specific rather than
-                superlative. Three years is stated as the fact it is; §14.5
-                rules out implying more heritage than actually exists. */}
+            {/* §1.4 — plain and specific. He founded and runs the workshop;
+                he does not personally make every bag, and saying otherwise
+                would be contradicted by our own photograph directly above
+                (§14.5, CONTEXT.md D9). */}
             <p className="prose-measure text-forest-soft mt-4">
-              {makerName} has been making bags by hand for{' '}
-              {siteConfig.maker.yearsOfExperience} years
-              {makerLocation ? `, in a small workshop in ${makerLocation}` : ''}.
-              Every bag on this site is cut, stitched, and finished by him.
-              Nothing is outsourced and nothing is mass-produced, which is why
-              stock is limited and why no two bags come out quite the same.
+              {makerName} founded this workshop{' '}
+              {siteConfig.maker.yearsOfExperience} years ago and still runs it
+              {makerLocation ? `, in ${makerLocation}` : ''}. A team of ten to
+              twenty people cuts and stitches here, on our own machines, in our
+              own premises — nothing is subcontracted out.
             </p>
             <p className="mt-6">
               <Link

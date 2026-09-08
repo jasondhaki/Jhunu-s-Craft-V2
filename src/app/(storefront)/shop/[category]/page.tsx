@@ -36,13 +36,23 @@ const CATEGORIES: Record<string, CategoryDef> = {
     filters: { material: [Material.JUTE] },
     lockedMaterial: true,
   },
-  leather: {
-    title: 'Leather bags',
-    h1: 'Leather bags',
+  canvas: {
+    title: 'Canvas backpacks',
+    h1: 'Canvas backpacks',
     intro:
-      'Full-grain buffalo leather, 1.4 mm, vegetable tanned. Full-grain means the outer surface of the hide is left intact rather than sanded down and stamped with an artificial texture, which is what makes it wear well: it darkens and softens with use instead of flaking. These are the slowest pieces to make. Panels are skived at the edges before stitching so corners sit square, seams are double-stitched at every stress point, and edges are burnished by hand rather than sealed with a coating. Several are made to order, which is why they show a lead time rather than a stock count. A leather bag bought here should outlast several cheaper ones, and it will look more like yours every year.',
+      'Heavy cotton canvas, cut and stitched in our own workshop in Dhaka. These are the bags the workshop makes most of — backpacks built for a school run or a daily commute rather than a weekend away. A padded back panel and shoulder straps, a separate padded sleeve inside for a laptop or tablet, a zipped front pocket, and open side pockets for a bottle. The stress points at the strap anchors and along the base are double-stitched, because that is where a school bag gives out first. Canvas softens with use and takes colour well; over years of strong sunlight a dyed natural fibre will fade a little, which is normal rather than a fault. We make these in quantity for schools and organisations too, so if you need fifty of them in one colour, that is a conversation we have often.',
     metaDescription:
-      'Handmade full-grain leather bags — crossbodies, handbags, totes and office bags, cut and hand-stitched in a one-man workshop in Dhaka.',
+      'Cotton canvas backpacks made in Dhaka — padded back and straps, laptop sleeve, double-stitched at every stress point.',
+    filters: { material: [Material.COTTON] },
+    lockedMaterial: true,
+  },
+  leather: {
+    title: 'Leather-trimmed bags',
+    h1: 'Leather-trimmed bags',
+    intro:
+      'We do not make bags from leather alone — we use it where a bag actually takes strain. On our office bags that means the trim, the corners, the handle, and the flap strap, over a stiffened jute body. The leather is stitched through the jute rather than glued to it, which is why the handles and the flap do not pull away over time. Full-grain hide, with the outer surface left intact rather than sanded smooth and embossed with an artificial grain, so it darkens and softens with use instead of flaking. If you are looking for an all-leather bag, we are honestly not the workshop for it.',
+    metaDescription:
+      'Leather-trimmed jute office bags, briefcases and totes, cut and stitched in our own workshop in Dhaka.',
     filters: { material: [Material.LEATHER] },
     lockedMaterial: true,
   },
@@ -60,7 +70,7 @@ const CATEGORIES: Record<string, CategoryDef> = {
     title: 'New arrivals',
     h1: 'New arrivals',
     intro:
-      'The most recent bags to come out of the workshop. Because everything is made by one person, new pieces arrive in small numbers rather than in seasonal collections — a few at a time, whenever they are finished. If something here is showing a low stock count, that is the real number.',
+      'The most recent bags to come out of the workshop. Between bulk orders we make our own designs in small runs rather than seasonal collections, so new pieces appear whenever a run is finished. If something here shows a low stock count, that is the real number.',
     metaDescription:
       'The newest handmade jute and leather bags from the workshop, added as they are finished.',
     filters: { sort: 'newest' },

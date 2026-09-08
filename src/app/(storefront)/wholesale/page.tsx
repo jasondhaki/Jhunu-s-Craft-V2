@@ -1,124 +1,199 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import { MessageType } from '@prisma/client';
 import { ProsePage, ProseSection, P, UL } from '@/components/prose-page';
 import { ContactForm } from '@/components/contact-form';
 
 /**
- * Wholesale — plan §6.9 and §15.7.
+ * Wholesale and contract manufacturing — plan §6.9, §15.7, §26.5.
  *
- * "MOQ, lead times, pricing approach, an enquiry form. International boutiques
- * and gift shops are a real channel for handmade goods."
+ * REWRITTEN 2026-09-08 (CONTEXT.md D9). The previous version was built on the
+ * plan's §1.1 assumption of a single maker and told buyers we could not fill a
+ * large order quickly. That was the opposite of the truth: bulk work is most
+ * of what this workshop does, for named international clients.
  *
- * §26.5 rates wholesale outreach highly: "one wholesale account can equal
- * months of retail orders." The honest constraint — one maker, real lead
- * times — is stated plainly rather than discovered later, because a buyer who
- * is let down once does not come back.
+ * §26.5 rates wholesale outreach highly — "one wholesale account can equal
+ * months of retail orders" — and here it is the established business rather
+ * than a hoped-for channel. The page leads with proof (real clients, real
+ * photographs of the work) because for a B2B buyer that is the whole decision.
  */
 
 export const metadata: Metadata = {
-  title: 'Wholesale',
+  title: 'Wholesale & bulk orders',
   description:
-    'Handmade jute and leather bags for shops, galleries, and gift stores. Small minimums, honest lead times.',
+    'Contract manufacturing of jute and canvas bags in Dhaka — promotional totes, school bags, and branded bags for companies, schools, and development organisations.',
   alternates: { canonical: '/wholesale' },
 };
 
 export default function WholesalePage() {
   return (
     <ProsePage
-      title="Wholesale"
-      intro="For shops, galleries, museum stores, and anyone selling to people who care where things come from."
+      title="Wholesale and bulk orders"
+      intro="Most of what this workshop makes is bulk work for other organisations. If you need branded bags in quantity, this is the part of the business built for it."
       crumbs={[{ label: 'Wholesale' }]}
     >
-      <ProseSection heading="The honest constraint, first">
+      <ProseSection heading="What we already do">
         <P>
-          Everything is made by one person. That is the selling point for your
-          customers and the limitation for you, and it would be unfair to bury
-          it below the pricing.
+          A team of ten to twenty people on industrial machines, in our own
+          premises in Dhaka. We cut, print, stitch, and finish in-house — the
+          work is not subcontracted out, so the quality and the timeline are
+          ours to answer for.
         </P>
-        <P>
-          It means we cannot fill a large order quickly, and we would rather
-          turn one down than accept it and miss the date. What we can do is a
-          steady, reliable supply of small batches — which for most independent
-          shops is what actually sells.
-        </P>
+
+        {/* §14.3 — real work, photographed. Proof beats adjectives for a
+            B2B buyer, and these are our own photographs (§28). */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <figure>
+            <Image
+              src="/Processing Bulk Products.jpeg"
+              alt="Jute tote bags printed for Swisscontact and B-SETS, stacked beside an industrial sewing machine during production"
+              width={1200}
+              height={1600}
+              sizes="(min-width: 640px) 50vw, 100vw"
+              className="border-line rounded-md border object-cover"
+            />
+            <figcaption className="text-muted mt-2 text-xs">
+              Printed jute totes in production for a Swisscontact skills
+              programme.
+            </figcaption>
+          </figure>
+          <figure>
+            <Image
+              src="/Employees at work.jpeg"
+              alt="Workers at rows of industrial sewing machines assembling bags in the Jhunu's Crafts workshop"
+              width={1280}
+              height={960}
+              sizes="(min-width: 640px) 50vw, 100vw"
+              className="border-line rounded-md border object-cover"
+            />
+            <figcaption className="text-muted mt-2 text-xs">
+              The production floor, mid-run.
+            </figcaption>
+          </figure>
+        </div>
       </ProseSection>
 
-      <ProseSection heading="Minimum order">
+      <ProseSection heading="Who we have made for">
         <P>
-          Ten pieces, which can be mixed across designs and colours. We keep it
-          low deliberately: a shop should be able to test whether these sell
-          before committing to a season of them.
+          Named with permission, and deliberately specific — a vague claim about
+          &ldquo;international clients&rdquo; is worth nothing:
         </P>
-      </ProseSection>
-
-      <ProseSection heading="Lead times">
         <UL>
           <li>
-            <strong>10–20 pieces</strong> — usually three to four weeks.
+            <strong>Swisscontact</strong> and <strong>B-SETS</strong> — printed
+            jute totes for a youth skills-development programme on diversified
+            jute products.
           </li>
           <li>
-            <strong>20–50 pieces</strong> — six to eight weeks.
+            <strong>Adhuna Bangladesh Limited</strong> — co-branded jute bags
+            for the same programme.
           </li>
           <li>
-            <strong>More than that</strong> — talk to us before you plan around
-            it. We will give you a real answer, including no.
+            <strong>Ministry of Textiles and Jute</strong> and the{' '}
+            <strong>Bangladesh Climate Change Trust</strong> — branded school
+            bags produced under a government programme.
           </li>
         </UL>
         <P>
-          Repeat orders of something already in production are faster than a
-          first order of something new.
+          Development organisations and government programmes are demanding
+          clients: fixed budgets, fixed delivery dates, and a specification that
+          does not move. That is the standard the workshop is used to working
+          to.
+        </P>
+      </ProseSection>
+
+      <ProseSection heading="What we can make">
+        <UL>
+          <li>
+            <strong>Promotional and conference totes</strong> — jute, with a
+            printed or stitched panel carrying your branding.
+          </li>
+          <li>
+            <strong>School bags</strong> — canvas backpacks, in your colours,
+            with a printed badge or logo.
+          </li>
+          <li>
+            <strong>Office and laptop bags</strong> — jute with leather trim, for
+            corporate gifting.
+          </li>
+          <li>
+            <strong>Your own design</strong> — send a sample or a drawing and we
+            will make a prototype before committing to a run.
+          </li>
+        </UL>
+      </ProseSection>
+
+      <ProseSection heading="Minimum order and lead times">
+        <P>
+          Minimum is 100 pieces for a branded bulk order — below that, printing
+          and set-up cost more per bag than the bag does.
+        </P>
+        <UL>
+          <li>
+            <strong>100–500 pieces</strong> — typically two to three weeks from
+            an approved sample.
+          </li>
+          <li>
+            <strong>500–2,000 pieces</strong> — typically three to five weeks.
+          </li>
+          <li>
+            <strong>Larger than that</strong> — tell us the deadline and we will
+            give you a straight answer, including no. We would rather decline an
+            order than miss a delivery date on a programme launch.
+          </li>
+        </UL>
+        <P>
+          Add roughly a week at the start for sampling and approval on a design
+          we have not made before.
         </P>
       </ProseSection>
 
       <ProseSection heading="Pricing">
         <P>
-          Wholesale pricing is tiered by volume and quoted per order, because it
-          depends on the mix — leather pieces have a very different material
-          cost from jute ones.
+          Quoted per order, because it depends on the material, the size, the
+          printing, and the quantity — a printed jute tote and a leather-trimmed
+          office bag are not remotely the same cost.
         </P>
         <P>
-          As a guide, expect a meaningful discount on retail at the minimum
-          order, improving with volume. We will not quote a headline percentage
-          here that turns out to have conditions attached.
+          Send a specification and quantity and you will get a real figure, not
+          a range that changes later. Sampling is charged separately and
+          credited against the order if it goes ahead.
         </P>
       </ProseSection>
 
-      <ProseSection heading="What we provide">
-        <UL>
-          <li>Photographs you may use for your own listings and marketing.</li>
-          <li>
-            The maker&rsquo;s name and the story behind the bags, which is
-            usually what sells them.
-          </li>
-          <li>Care cards to pass on to your customers.</li>
-          <li>Consistent SKUs, so reordering is simple.</li>
-        </UL>
+      <ProseSection heading="Retail wholesale">
+        <P>
+          If you are a shop rather than a brand — buying our own designs to
+          resell rather than commissioning branded bags — the minimum is lower,
+          at ten pieces mixed across designs. That lets a shop test whether
+          these sell before committing to a season of them.
+        </P>
       </ProseSection>
 
       <ProseSection heading="Shipping and payment">
         <P>
-          Wholesale orders ship by courier, at cost. International orders go by
-          DHL; duties and import charges are the buyer&rsquo;s responsibility,
-          as with any import.
+          Bulk orders ship by courier at cost, or you can collect from the
+          workshop. International orders go by air freight or courier; duties
+          and import charges are the buyer&rsquo;s responsibility.
         </P>
         <P>
-          Payment is half on order and half before dispatch. For a first order
-          we will usually arrange a bank transfer directly rather than through
-          the website.
+          Payment is normally half on order and half before dispatch, by bank
+          transfer. For institutional buyers we can work to your standard
+          purchase-order and invoicing terms.
         </P>
       </ProseSection>
 
-      <ProseSection heading="Get in touch">
+      <ProseSection heading="Tell us what you need">
         <P>
-          Tell us about your shop, what you are drawn to, rough quantities, and
-          any date you are working towards.
+          The more specific the better: quantity, material, size, what branding
+          goes on it, and the date you need it by.
         </P>
         <ContactForm
           type={MessageType.WHOLESALE}
           submitLabel="Send enquiry"
           successHeading="Enquiry sent"
-          defaultSubject="Wholesale enquiry"
-          messageHint="Your shop and where it is, which pieces interest you, rough quantities, and any deadline."
+          defaultSubject="Bulk order enquiry"
+          messageHint="Quantity, material, size, the branding you need, and your deadline. A sample photo or drawing helps a lot."
         />
       </ProseSection>
     </ProsePage>

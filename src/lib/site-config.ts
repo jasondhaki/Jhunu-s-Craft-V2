@@ -20,8 +20,9 @@ export const siteConfig = {
   nameBn: 'ঝুনুর ক্রাফটস',
 
   /** §1.3 positioning statement. Rewrite once the maker's name is known. */
-  tagline: 'Handmade jute and leather bags from a one-man workshop in Bangladesh.',
-  taglineBn: 'বাংলাদেশের এক কারিগরের কর্মশালা থেকে হাতে তৈরি পাট ও চামড়ার ব্যাগ।',
+  tagline: 'Jute and canvas bags, made in our own workshop in Dhaka.',
+  /** Needs a human rewrite to match the corrected English (§22, CONTEXT.md Q10). */
+  taglineBn: '[TAGLINE_BN]',
 
   /** Logo tagline, already set in the mark itself. */
   descriptor: 'Eco-friendly products',
@@ -31,20 +32,42 @@ export const siteConfig = {
    * The maker. Appears in the §1.3 positioning line, the PDP maker credit
    * (§6.3.13), and the About page (§6.8). CONTEXT.md Q1.
    */
+  /**
+   * The founder — NOT the sole maker.
+   *
+   * CORRECTION (2026-09-08). The site previously said every bag was made by
+   * one person, following the plan's §1.1 assumption. That was wrong: this is
+   * a workshop with a team, and James Dilip Dhaki is its founder and head.
+   * §14.5 and §1.4 make overstating this a real problem, not a nuance — see
+   * CONTEXT.md D9.
+   */
   maker: {
     name: 'James Dilip Dhaki',
     /** His own spelling, supplied by the owner — not transliterated (§22). */
     nameBn: 'জেমস দিলিপ ঢাকি',
+    /** How to describe him. Founder and head of the workshop, not "the maker". */
+    role: 'Founder',
     /**
      * §1.4 wants specific over superlative. Three years is the real number,
-     * and it is stated plainly rather than dressed up — §14.5 rules out
-     * implying more heritage than exists, and §1.1's advantage is that one
-     * named person makes every bag, not that he has done it for decades.
+     * stated plainly rather than dressed up — §14.5 rules out implying more
+     * heritage than exists.
      */
     yearsOfExperience: 3,
     location: 'Monipuripara, Tejgaon, Dhaka',
     /** Supplied by the owner, not transliterated (§22). */
     locationBn: 'মনিপুরিপাড়া, তেজগাঁও, ঢাকা',
+  },
+
+  /**
+   * The workshop. This is what the positioning actually rests on (see D9):
+   * a small team doing skilled work in-house, led by a named founder — not a
+   * lone craftsman, and not an anonymous factory either.
+   */
+  workshop: {
+    /** Owner-confirmed range. Written as "10 to 20" rather than a false precise number. */
+    teamSizeLabel: '10 to 20 people',
+    /** Machines are industrial, and pretending otherwise would be visible in our own photos. */
+    equipment: 'industrial sewing machines',
   },
 
   /**

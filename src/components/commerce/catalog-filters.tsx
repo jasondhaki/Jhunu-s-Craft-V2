@@ -19,6 +19,7 @@ import { SORT_OPTIONS, type SortKey } from '@/lib/catalog';
 export const MATERIAL_LABELS: Record<Material, string> = {
   JUTE: 'Jute',
   LEATHER: 'Leather',
+  COTTON: 'Cotton canvas',
   MIXED: 'Jute + leather',
 };
 

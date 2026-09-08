@@ -49,8 +49,9 @@ export default async function ShippingPage() {
           buy, not after.
         </P>
         <P>
-          Everything is made by one person, so if something is going to be late
-          we will tell you rather than let the tracking page say it for us.
+          Everything is made in our own workshop, so we know where an order
+          actually is. If something is going to be late we will tell you rather
+          than let the tracking page say it for us.
         </P>
       </ProseSection>
 

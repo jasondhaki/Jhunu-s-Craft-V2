@@ -8,7 +8,7 @@
 
 ## 1. What this is
 
-An ecommerce site for **Jhunu's Crafts** — a one-maker family workshop in Bangladesh producing handmade jute and leather bags (women's side bags, handbags, shopping bags, totes).
+An ecommerce site for **Jhunu's Crafts** — a bag workshop in Dhaka, Bangladesh, employing 10–20 people and founded by James Dilip Dhaki. It makes cotton canvas backpacks, jute side bags, and jute-and-leather office bags, and does substantial **bulk and contract work** for schools, companies, and development organisations.
 
 - **Repo:** https://github.com/jasondhaki/Jhunu-s-Craft-V2 (auto-deploys on push to `main`)
 - **Live:** https://jhunus-crafts.vercel.app
@@ -16,7 +16,7 @@ An ecommerce site for **Jhunu's Crafts** — a one-maker family workshop in Bang
 - **Spec:** `ecommerce-master-plan.md` — 28 sections, treated as the source of truth. Section numbers are cited throughout this file as `§n`.
 - **Hosting:** Vercel (temporary, per the owner's instruction).
 - **Markets:** Bangladesh (primary — BDT, COD-heavy) + international (secondary — USD, card, courier).
-- **Core positioning (§1.1):** every bag is made by one named person, by hand. Every design and copy decision reinforces that.
+- **Core positioning (CORRECTED — see D9):** a workshop of 10–20 people in Dhaka, founded and run by James Dilip Dhaki, keeping the work in-house. The plan’s §1.1 “one named person makes every bag” premise was **wrong for this business** and every claim repeating it has been removed.
 
 ---
 
@@ -28,7 +28,8 @@ Standing risks that are accepted *for now* and must not reach production unresol
 |---|---|---|---|
 | **R1** | **Rotate the Neon database password.** | The current password was shared in a chat transcript, so it must be treated as compromised — §13.7: "Rotate credentials if anything is ever committed — assume it's compromised." It grants full read/write to every customer, order, and address record. | **Deferred by owner (2026-09-08), deliberately.** Rotate in the Neon console, then update `.env` and all three Vercel environments. |
 | **R2** | **Enable admin 2FA.** | §13.2 calls TOTP "the single highest-value security control on the whole site" and makes it mandatory on admin accounts. The schema, session gate, and `ADMIN_2FA_ENFORCED` switch exist; the enrolment flow does not. | Phase 3. The admin panel shows a standing red warning until it is on. |
-| **R3** | **Replace every placeholder photograph.** | §28: stock or borrowed images are "instantly detectable, instantly fatal to trust". All 144 image records currently point at `photo-pending.svg`. | Blocked on Q6. |
+| **R3** | **Confirm prices, dimensions, and weights on the real products.** | Prices were read from handwritten tags in the photographs, or are absent entirely. Dimensions and weights are estimates made from photographs — §9.2 warns that a wrong weight means wrong international shipping quotes that the business absorbs. Unpriced products are DRAFT and invisible until published (D10). | **Owner action — in the admin panel.** |
+| **R8** | **More product photography.** | §21.1 asks for six shots per product; most have one. Missing: interiors, detail shots of stitching and hardware, and a scale shot with a person wearing the bag. The photographs supplied are genuine and good — there are simply not enough angles yet. | Owner action. |
 | **R4** | **Replace the temporary admin password.** | Generated during setup and shown in a chat transcript. | Run `npm run admin:create`. |
 | **R5** | **Legal review of the policy pages.** | §15 — a Bangladeshi lawyer should review the terms and refund policy before launch. | Phase 4. |
 | **R6** | **Verify a sending domain in Resend, with SPF/DKIM/DMARC.** | Until then Resend permits only its sandbox sender (`onboarding@resend.dev`) and delivers **only to the account owner's own address** — so a real customer receives no confirmation at all. §10.2: without correct DNS "your confirmations will land in spam and customers will assume you're a scam." This is a DNS task, not a code task; the code is done and tested. | **Blocked on a domain (Q4), deferred by owner.** |
@@ -37,6 +38,51 @@ Standing risks that are accepted *for now* and must not reach production unresol
 ---
 
 ## 2. Decisions locked
+
+### D9 — ⚠ POSITIONING CORRECTION: this is a workshop with a team, not a lone maker
+**Date:** 2026-09-08 · **Status:** locked · **Supersedes the plan's §1.1 premise**
+
+**The site was making false claims and they have been removed.**
+
+The plan's §1.1 asserts the core advantage is that "every bag is made by one named person, by hand", and everything built before this point repeated it: *"one person, one bench"*, *"Every bag made by one pair of hands"*, *"Handmade by one person"*, and a wholesale page telling buyers we could not fill a large order.
+
+The owner corrected it: **James Dilip Dhaki is the founder and head of the workshop, not its only maker.** His own photographs show a production floor with rows of industrial machines and a team at work.
+
+Confirmed facts now driving the copy:
+
+| | |
+|---|---|
+| Team | 10 to 20 people, employed directly, not subcontracted |
+| Equipment | Industrial sewing machines (JACK, JUKI), in their own premises |
+| Founder | James Dilip Dhaki — founded it 3 years ago, still runs it |
+| Main business | **Bulk / contract manufacturing**, not one-off artisan retail |
+| Named clients | Swisscontact, B-SETS, Adhuna Bangladesh Limited, Ministry of Textiles and Jute, Bangladesh Climate Change Trust (owner gave permission to name them) |
+| Real products | Cotton canvas backpacks, jute side bags, jute-and-leather office bags, branded promotional totes |
+
+**Why this mattered enough to stop and fix:** §14.5 forbids fabricated trust signals and §1.4 demands plain truth. A claim of solo craftsmanship is not a harmless flourish — it is the kind of thing a customer or a journalist can disprove by looking at the company's own photographs, and it would have discredited everything else on the site. 16 false claims across 7 files were corrected.
+
+**The positioning that replaces it** is not weaker, just different and true: a real workshop, work kept in-house rather than farmed out, a named person accountable for it, and institutional clients who already rely on them. Bulk capability is an asset to lead with, not a limitation to apologise for.
+
+**Consequences carried forward:**
+- The wholesale page was rewritten completely — it now leads with real clients and real capacity, and the minimum went from 10 pieces to 100 for branded work.
+- `Material.COTTON` was added to the schema: the backpacks are cotton canvas, which the jute/leather/mixed enum could not express without lying about the material.
+- The invented 24-product sample catalogue was deleted and replaced with the real products (see D10).
+- There is **no leather-only category**, because there is no leather-only product. A category leading to an empty grid is worse than an absent one.
+
+### D10 — Real products ship as DRAFT unless the price is known
+**Date:** 2026-09-08 · **Status:** locked · **Plan §14.5**
+
+The real catalogue was rebuilt from the owner's photographs. Some of those photographs contain handwritten price tags; most do not.
+
+**Rule applied: a product with no known price is created as DRAFT, not ACTIVE.** A draft is invisible on the storefront until the owner sets a real price and publishes it in admin.
+
+The alternative — inventing a plausible price so the shop looks full — would put a number in front of a customer that the business never agreed to. A made-up price is not a placeholder, it is a quote.
+
+Current state: **1 live** (canvas backpack, price read from a handwritten tag and needing confirmation), **3 draft** (jute+leather office bag, jute side bag, nakshi panel backpack). Every product also carries an admin note saying dimensions and weight are photograph estimates — §9.2 warns a wrong weight means wrong international shipping.
+
+---
+
+## 2a. Earlier decisions
 
 Recorded with the reasoning, so they don't get re-litigated.
 
