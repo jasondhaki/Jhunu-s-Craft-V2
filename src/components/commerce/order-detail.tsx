@@ -4,6 +4,8 @@ import { formatMoney, type Currency } from '@/lib/money';
 import { STATUS_LABELS } from '@/lib/orders';
 import { siteConfig } from '@/lib/site-config';
 import { cn } from '@/lib/cn';
+import { reviewableProductsForOrder } from '@/lib/reviews';
+import { ReviewForm } from './review-form';
 
 /**
  * Customer-facing order view — plan §6.7.
@@ -28,7 +30,16 @@ const TIMELINE: OrderStatus[] = [
   OrderStatus.DELIVERED,
 ];
 
-export function OrderDetail({ order }: { order: FullOrder }) {
+export async function OrderDetail({
+  order,
+  /** Passed on the guest path so the review form can prove order access. */
+  guestToken,
+}: {
+  order: FullOrder;
+  guestToken?: string;
+}) {
+  // §6.3.14 — only a DELIVERED order yields anything reviewable.
+  const reviewable = await reviewableProductsForOrder(order.id);
   const currency = order.currency as Currency;
   const address = order.shippingAddress as Record<string, string | null>;
 
@@ -215,6 +226,40 @@ export function OrderDetail({ order }: { order: FullOrder }) {
           {address.phone}
         </address>
       </section>
+
+      {/* §6.3.14 — the write-a-review entry point lives here rather than on
+          the product page, because this is where we know the customer
+          actually received the bag. */}
+      {reviewable.length > 0 && (
+        <section className="border-line border-t pt-8">
+          <h2 className="font-display text-md font-semibold">
+            How did you get on with {reviewable.length === 1 ? 'it' : 'them'}?
+          </h2>
+          <p className="text-muted mt-1 mb-6 text-sm">
+            Honest reviews help the next person more than kind ones. We publish
+            the critical ones too.
+          </p>
+
+          <div className="space-y-8">
+            {reviewable.map((item) =>
+              item.alreadyReviewed ? (
+                <p key={item.productId} className="text-muted text-sm">
+                  Thank you for reviewing {item.name}.
+                </p>
+              ) : (
+                <div key={item.productId} className="border-line rounded-md border p-4">
+                  <ReviewForm
+                    orderId={order.id}
+                    productId={item.productId}
+                    productName={item.name}
+                    guestToken={guestToken}
+                  />
+                </div>
+              ),
+            )}
+          </div>
+        </section>
+      )}
 
       <p className="text-muted text-sm">
         Something wrong with this order? Call{' '}

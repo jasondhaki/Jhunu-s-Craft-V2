@@ -5,6 +5,7 @@ import {
   Boxes,
   ShoppingCart,
   MessageSquare,
+  Star,
   LogOut,
 } from 'lucide-react';
 import { getAdmin, destroySession, ADMIN_2FA_ENFORCED } from '@/lib/admin-auth';
@@ -27,6 +28,7 @@ const nav = [
   { href: '/admin/orders', label: 'Orders', Icon: ShoppingCart },
   { href: '/admin/products', label: 'Products', Icon: Package },
   { href: '/admin/inventory', label: 'Stock', Icon: Boxes },
+  { href: '/admin/reviews', label: 'Reviews', Icon: Star },
   { href: '/admin/messages', label: 'Messages', Icon: MessageSquare },
 ] as const;
 

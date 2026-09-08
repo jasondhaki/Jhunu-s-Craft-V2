@@ -75,7 +75,7 @@ export default async function TrackOrderPage({
               ← Track another order
             </Link>
           </p>
-          <OrderDetail order={result} />
+          <OrderDetail order={result} guestToken={result.publicToken} />
         </>
       ) : (
         <>

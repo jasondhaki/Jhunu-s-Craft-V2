@@ -17,6 +17,8 @@ import { ProductGrid } from '@/components/commerce/product-grid';
 import { PurchasePanel } from '@/components/commerce/purchase-panel';
 import { MATERIAL_LABELS } from '@/components/commerce/catalog-filters';
 import { JsonLd } from '@/components/json-ld';
+import { getProductReviews, getRatingSummary } from '@/lib/reviews';
+import { ProductReviews, Stars } from '@/components/commerce/product-reviews';
 
 /**
  * Product detail page — plan §6.3, "the most important page".
@@ -68,7 +70,11 @@ export default async function ProductPage({
 
   if (!product) notFound();
 
-  const related = await getRelatedProducts(product);
+  const [related, reviews, ratingSummary] = await Promise.all([
+    getRelatedProducts(product),
+    getProductReviews(product.id),
+    getRatingSummary(product.id),
+  ]);
   const stock = stockState(product);
 
   const price = resolvePrice(currency, product, product.variants[0] ?? null);
@@ -80,11 +86,16 @@ export default async function ProductPage({
 
   const categoryHref = `/shop/${product.material.toLowerCase()}`;
 
-  // §6.3 structured data — Product + Offer. aggregateRating and review are
-  // omitted on purpose: there are no reviews yet, and emitting an empty or
-  // invented rating is both a Google structured-data violation and exactly
-  // the kind of faked social proof §14.3 forbids.
-  const jsonLd = {
+  /*
+   * §6.3 / §17.2 structured data — Product + Offer, plus aggregateRating
+   * ONLY when approved reviews actually exist.
+   *
+   * Emitting an aggregateRating with no reviews behind it is both a Google
+   * structured-data violation and precisely the fabricated social proof
+   * §14.3 forbids, so the field is added conditionally below rather than
+   * defaulted to zero.
+   */
+  const jsonLd: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: product.nameEn,
@@ -108,6 +119,29 @@ export default async function ProductPage({
       itemCondition: 'https://schema.org/NewCondition',
     },
   };
+
+  if (ratingSummary) {
+    jsonLd.aggregateRating = {
+      '@type': 'AggregateRating',
+      ratingValue: ratingSummary.average.toFixed(1),
+      reviewCount: ratingSummary.count,
+      bestRating: 5,
+      worstRating: 1,
+    };
+    jsonLd.review = reviews.slice(0, 5).map((review) => ({
+      '@type': 'Review',
+      author: { '@type': 'Person', name: review.authorName },
+      datePublished: review.createdAt.toISOString().slice(0, 10),
+      reviewRating: {
+        '@type': 'Rating',
+        ratingValue: review.rating,
+        bestRating: 5,
+        worstRating: 1,
+      },
+      ...(review.title ? { name: review.title } : {}),
+      reviewBody: review.body,
+    }));
+  }
 
   const accordions = [
     {
@@ -238,8 +272,20 @@ export default async function ProductPage({
             {product.nameEn}
           </h1>
 
-          {/* §6.3.3 star rating omitted — no reviews exist yet, and §14.3
-              forbids inventing them. It appears once real ones do. */}
+          {/* §6.3.3 — rating jumps to the reviews section. Rendered only
+              when real reviews exist; §14.3 forbids inventing them. */}
+          {ratingSummary && (
+            <a
+              href="#reviews"
+              className="mt-3 inline-flex items-center gap-2 text-sm underline-offset-4 hover:underline"
+            >
+              <Stars rating={ratingSummary.average} />
+              <span className="text-muted">
+                {ratingSummary.count}{' '}
+                {ratingSummary.count === 1 ? 'review' : 'reviews'}
+              </span>
+            </a>
+          )}
 
           <p className="prose-measure text-forest-soft mt-4">
             {product.shortDescriptionEn}
@@ -316,7 +362,8 @@ export default async function ProductPage({
         </div>
       </div>
 
-      {/* Reviews (§6.3.14) — the section appears when real reviews exist. */}
+      {/* Reviews (§6.3.14) — renders nothing until real reviews exist. */}
+      <ProductReviews summary={ratingSummary} reviews={reviews} />
 
       {/* You may also like (§6.3.15) */}
       {related.length > 0 && (
