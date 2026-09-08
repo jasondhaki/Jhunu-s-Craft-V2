@@ -245,6 +245,21 @@ Newest last. Every action Claude takes on this project is recorded here.
 | 80 | **Refactored the Argon2 parameters into one module** | They had been copy-pasted into three files with a comment asking future edits to keep them in sync — which is not a mechanism. Now `src/lib/password.ts` is the single definition. It also has no Next.js import, which is what makes the crypto testable outside a request context at all. Verified the existing admin password still verifies after the move. |
 | 81 | **Tested the IDOR surface directly** | 20 checks that actively attempt the attack: reading another customer's order by id, using an order number with no proof, using a wrong email, using a *valid token from a different order*. All refused. §13.3 calls IDOR "the most common serious flaw in small ecommerce sites", so these are assertions rather than assumptions. |
 
+### 2026-09-08 — Session 1, Phase 4 (trust & content)
+
+| # | Action | Detail |
+|---|---|---|
+| 82 | Technical SEO | `robots.ts` blocks admin, account, cart, checkout, and faceted URLs (§17.1); returns a blanket disallow unless `NEXT_PUBLIC_ALLOW_INDEXING` is true, so preview deployments cannot be indexed. `sitemap.ts` is generated from the live catalogue and deliberately excludes everything robots.txt blocks — listing a blocked page is a contradiction Search Console flags. |
+| 83 | Structured data (§17.2) | `Organization` site-wide, `WebSite` + `SearchAction`, `FAQPage` from the same array the FAQ renders, `BreadcrumbList` already in place. `LocalBusiness` is emitted **only** on /contact and only when a real address exists — claiming a visitable storefront that does not exist would be a false trust signal. |
+| 84 | Cookie consent (§13.8) | Granular necessary/analytics/marketing, nothing pre-ticked, and **reject is as easy as accept** — a banner where refusing takes an extra click is a dark pattern (§14.5) and non-compliant. Gating is structural: `<Analytics>` does not render the script tags at all without consent, so no request is made and no cookie is set. |
+| 85 | Wrote the policy pages | Terms, privacy, cookies, refund, accessibility, IP notice — plain language per §14.5, not generator legalese. The privacy policy describes what the code **actually** does (real processors, real retention), and the cookie table lists real cookie names from the source. Every page carries a visible note that §15 requires a Bangladeshi lawyer's review (R5). |
+| 86 | Wrote the content pages | FAQ (30 questions across 7 groups, including the awkward ones §6.9 names), care (with the mould section §6.9 calls a real credibility signal), materials, process, size guide, shipping, custom orders, wholesale, contact, reviews. |
+| 87 | **Did not write the About page's story** | §6.8 wants the maker's account "in his voice". Inventing it would be the single most damaging thing on the site — §1.4 wants plain first-person truth and §14.5 rules out fabricated authenticity. The page ships with what is verifiably true and a clearly-marked gap for his own words. Raised as Q17. |
+| 88 | Reviews page ships empty, and says why | §14.3 and §28 forbid fake reviews. Rather than hide the section, the page states plainly that inventing praise would make every real review worthless later. Only APPROVED reviews render, and the verified badge is tied to a real delivered order. |
+| 89 | Live data, not duplicated copy | The shipping page reads the same `ShippingZone` rows checkout quotes from, and the size guide reads real product dimensions. Neither can drift out of sync with what a customer is actually charged or sent. |
+| 90 | 404 and 500 pages (§7.3, §25) | Real copy, real routes out. The 500 page carries the phone number and tells anyone mid-order to call before retrying, so a broken site cannot cause a double charge. |
+| 91 | Declined to embed a map | §6.9 asks for one on /contact, but a Google Maps iframe sets third-party cookies before consent, which §13.8 forbids. Linked out instead — same usefulness, no violation. |
+
 ---
 
 ## 4. Build progress against §27
@@ -283,6 +298,7 @@ Blocking items are marked. Unblocked ones are being built around with clearly-ma
 | ~~Q13~~ | ~~How long he has been making bags~~ | **ANSWERED 2026-09-08: 3 years.** Stated plainly on the homepage. See D8 for why the copy was NOT rewritten to imply more heritage than exists. | — |
 | ~~Q14~~ | ~~Bangla workshop address~~ | **ANSWERED 2026-09-08: মনিপুরিপাড়া, তেজগাঁও, ঢাকা - ১২১৫** | — |
 | ~~Q15~~ | ~~Transactional email provider~~ | **ANSWERED 2026-09-08: Resend.** Key configured locally and in all three Vercel environments. A real confirmation email was sent and delivered during testing. Deliverability to real customers still needs a verified domain — tracked as **R6**. | — |
+| Q17 | **The maker’s own account of his work** — how he learned, why bags, what he cares about | §6.8 calls the About page “the emotional core of the site” and asks for it in his voice. A few honest paragraphs from him are worth more than anything drafted for him, and §14.5 rules out inventing it. The page currently has a marked gap. | No — blocks a convincing About page |
 | Q16 | **SMS gateway** (Bangladesh) | §10.3: local customers respond to SMS far more than email. Minimum is order confirmation and shipped-with-tracking. **Deferred by owner 2026-09-08.** Notification code is structured so adding an SMS transport is a new module beside the email one, not a rewrite. | **Deferred** |
 
 ---

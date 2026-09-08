@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from 'next';
 import { Fraunces, Work_Sans, Hind_Siliguri } from 'next/font/google';
 import { siteConfig } from '@/lib/site-config';
+import { OrganizationSchema } from '@/components/structured-data';
+import { CookieConsent } from '@/components/cookie-consent';
+import { Analytics } from '@/components/analytics';
 import './globals.css';
 
 /**
@@ -98,6 +101,15 @@ export default function RootLayout({
           Skip to content
         </a>
         {children}
+
+        {/* §17.2 — Organization on every page. */}
+        <OrganizationSchema />
+
+        {/* §13.8 — the banner, and the analytics it gates. Nothing in
+            <Analytics> renders until consent exists, so no third-party
+            request is made and no cookie is set before a choice. */}
+        <CookieConsent />
+        <Analytics />
       </body>
     </html>
   );
