@@ -43,8 +43,8 @@ export const siteConfig = {
      */
     yearsOfExperience: 3,
     location: 'Monipuripara, Tejgaon, Dhaka',
-    /** Place names in Bangla — not guessed, see CONTEXT.md Q14. */
-    locationBn: '[WORKSHOP_LOCATION_BN]',
+    /** Supplied by the owner, not transliterated (§22). */
+    locationBn: 'মনিপুরিপাড়া, তেজগাঁও, ঢাকা',
   },
 
   /**
@@ -79,6 +79,13 @@ export const siteConfig = {
     postcode: '1215',
     country: 'Bangladesh',
     countryCode: 'BD',
+    /**
+     * The whole address in Bangla, as the owner writes it — including
+     * Bengali numerals in the postcode (১২১৫). Kept as one string rather
+     * than split into fields, because Bangla address order and punctuation
+     * are the owner's to decide, not ours to reassemble (§22).
+     */
+    fullBn: 'মনিপুরিপাড়া, তেজগাঁও, ঢাকা - ১২১৫',
   },
 
   /**

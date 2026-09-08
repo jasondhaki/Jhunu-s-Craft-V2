@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { CART_COOKIE, CART_COOKIE_MAX_AGE } from '@/lib/cart-cookie';
 
 /**
  * Client cart — plan §6.4.
@@ -41,6 +42,23 @@ interface CartState {
 
 /** Hard ceiling per line — a stock check still happens server-side (§23.3). */
 const MAX_PER_LINE = 20;
+
+// The cookie name and lifetime live in a NON-client module. Exporting them
+// from here would make every server-side import a client reference rather
+// than the string itself — see src/lib/cart-cookie.ts for what that broke.
+
+function syncCookie(lines: CartLine[]): void {
+  if (typeof document === 'undefined') return;
+
+  const payload = lines
+    .filter((l) => l.quantity > 0)
+    .map((l) => ({ variantId: l.variantId, quantity: l.quantity }));
+
+  const value = encodeURIComponent(JSON.stringify(payload));
+  const secure = location.protocol === 'https:' ? '; Secure' : '';
+
+  document.cookie = `${CART_COOKIE}=${value}; Path=/; Max-Age=${CART_COOKIE_MAX_AGE}; SameSite=Lax${secure}`;
+}
 
 export const useCart = create<CartState>()(
   persist(
@@ -94,11 +112,22 @@ export const useCart = create<CartState>()(
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({ lines: state.lines }) as CartState,
       onRehydrateStorage: () => (state) => {
-        if (state) state.hydrated = true;
+        if (state) {
+          state.hydrated = true;
+          // Rebuild the cookie on load, in case it expired while
+          // localStorage survived (they have different lifetimes).
+          syncCookie(state.lines);
+        }
       },
     },
   ),
 );
+
+// Keep the server-readable cookie in step with every change. Subscribing
+// once here is more reliable than remembering to call syncCookie in each
+// mutator — a missed call would mean a cart that looks right on the client
+// and empty at checkout.
+useCart.subscribe((state) => syncCookie(state.lines));
 
 function clamp(quantity: number): number {
   if (!Number.isFinite(quantity)) return 1;

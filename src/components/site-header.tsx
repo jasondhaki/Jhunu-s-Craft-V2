@@ -1,7 +1,8 @@
 import Link from 'next/link';
-import { Search, User, Heart, ShoppingBag, Menu } from 'lucide-react';
+import { Search, User, Heart, Menu } from 'lucide-react';
 import { siteConfig, real } from '@/lib/site-config';
 import { Button } from '@/components/ui/button';
+import { CartCount } from '@/components/commerce/cart-controls';
 
 /**
  * Site header — plan §3.2.
@@ -91,13 +92,8 @@ export function SiteHeader() {
           >
             <Heart className="size-5" aria-hidden="true" />
           </Button>
-          <Button
-            variant="icon"
-            aria-label="Cart, 0 items"
-            className="text-paper hover:bg-forest-soft active:bg-forest-soft"
-          >
-            <ShoppingBag className="size-5" aria-hidden="true" />
-          </Button>
+          {/* Live count from the client cart store. */}
+          <CartCount />
         </div>
       </div>
 

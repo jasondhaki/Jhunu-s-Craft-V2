@@ -210,6 +210,21 @@ Newest last. Every action Claude takes on this project is recorded here.
 | 57 | Built the floating WhatsApp button | §14.1, dismissible per §14.5 with a real 44px close control and persistent dismissal. |
 | 58 | Hit a React 19 lint rule | `react-hooks/set-state-in-effect` rejected the effect-plus-setState pattern for reading localStorage. Rewrote with `useSyncExternalStore`, the correct hook for an external store, which also gives a defined server snapshot — so a dismissed button never flashes back in on hydration. |
 | 59 | Added §1b to this file | Five must-do-before-launch risks (R1–R5) promoted out of the buried question table, since the Neon rotation was deliberately deferred and must not be lost. |
+| 60 | Owner supplied the Bangla address | মনিপুরিপাড়া, তেজগাঁও, ঢাকা - ১২১৫, kept as one string with Bengali numerals rather than split into fields — Bangla address order is the owner's to decide (§22). Closed Q14. |
+
+### 2026-09-08 — Session 1, Phase 2 (commerce)
+
+| # | Action | Detail |
+|---|---|---|
+| 61 | Wrote `src/lib/shipping.ts` | Zone resolution with real precedence (country+region beats country beats rest-of-world), weight-banded international rates, free-shipping thresholds, and COD/duties predicates (§9.1, §9.2, §8.4). |
+| 62 | Wrote the `PaymentProvider` interface | §8.2 says international acceptance is unresolved and "could change the plan structurally", so §8.3's swappable-module instruction is the seam. Order logic knows only this interface. The COD adapter is the first implementation. |
+| 63 | Wrote `src/lib/orders.ts` | The §9.4 state machine as the single doorway for status changes — every transition writes an OrderEvent, and cancelling returns stock automatically rather than relying on a caller to remember. Order creation snapshots line items (§5.5), takes an idempotency key (§8.3), and decrements stock before persisting so a failure cannot leak inventory. |
+| 64 | Built cart, checkout, confirmation | Server-rendered cart with a real free-delivery progress bar, single-page accordion checkout (§6.5) with guest default and no account wall, cascading Division→District for BD, and a confirmation page looked up by unguessable `publicToken` rather than order number (§13.3 IDOR). |
+| 65 | Built admin order management | List with status tabs, detail with the big one-click advance button §11.2 calls the most-used control in the panel, full timeline, and a COD "record cash received" action — audited, MANAGER-only. |
+| 66 | **Proved the §23.3 race** | 10 tests: two simultaneous buyers of one unit → exactly one succeeds, stock lands at 0 and never negative, only the winner writes a StockMovement. Plus idempotency (a double-submit returns the same order and does not decrement twice) and snapshot integrity (renaming/repricing a product does not rewrite a historical order). This is the test CONTEXT.md D1 promised. |
+| 67 | **Found a real bug: cookies are not URL-decoded** | Next.js returns the stored cookie value as-is. `parseCartCookie` was calling `JSON.parse` on percent-encoded text, throwing, and the untrusted-input `catch` swallowed it into an empty cart. Fixed by decoding first. Noted because the silent catch is exactly the failure mode that hid it. |
+| 68 | **Found a second real bug: `'use client'` exports become client references** | `CART_COOKIE` was exported from `cart-store.ts`, which carries `'use client'`. Importing it into a Server Component yielded a proxy, not the string, so `cookies().get()` silently missed and checkout bounced to /cart with a full basket. Moved to `src/lib/cart-cookie.ts`, a neutral module. Nothing threw in either case — both bugs only surfaced because the e2e test asserted on rendered content. |
+| 69 | Added a test suite | `npm run test` → 29 checks across orders and shipping. Uses `tsx --conditions=react-server` so `server-only`-guarded modules resolve to their no-op build outside Next, keeping the guard intact in the app. |
 
 ---
 
@@ -219,7 +234,7 @@ Newest last. Every action Claude takes on this project is recorded here.
 |---|---|---|
 | **0 — Foundations** | Repo, tooling, design tokens, component skeleton, DB schema, staging | **Mostly done** — repo, tooling, tokens, schema, money/config libs, header/footer/homepage all built and building clean. Remaining: staging environment, and the rest of the §2.9 primitives. |
 | **1 — Catalog** | Product model, admin CRUD, image pipeline, home, category, PDP, search, filters | **Done** — seed catalog, home, /shop, categories, PDP, filters, sort, pagination, admin auth + dashboard + product CRUD + stock editing. Remaining: image upload pipeline, storefront search. |
-| **2 — Commerce** | Cart, guest checkout, COD, order creation, confirmation email, admin orders | Not started |
+| **2 — Commerce** | Cart, guest checkout, COD, order creation, confirmation email, admin orders | **Mostly done** — cart, guest checkout, COD, order creation, confirmation page, admin order management, order state machine. Remaining: transactional email (§10) and SMS (§10.3), both blocked on a provider account. |
 | **3 — Payments & accounts** | Gateway + webhooks, accounts, order history, guest tracking, wishlist, emails | Not started |
 | **4 — Trust & content** | Reviews, content + policy pages, FAQ, SEO, structured data, analytics | Not started |
 | **5 — Polish & launch** | Performance, a11y, cross-device QA, security review, real payment test | Not started |
@@ -247,7 +262,9 @@ Blocking items are marked. Unblocked ones are being built around with clearly-ma
 | ~~Q11~~ | ~~His name in Bangla~~ | **ANSWERED 2026-09-08: জেমস দিলিপ ঢাকি** — his own spelling, supplied by the owner rather than transliterated. | — |
 | ~~Q12~~ | ~~WhatsApp number~~ | **ANSWERED 2026-09-08: same as the phone line.** Floating click-to-chat button now live (§14.1), dismissible per §14.5. | — |
 | ~~Q13~~ | ~~How long he has been making bags~~ | **ANSWERED 2026-09-08: 3 years.** Stated plainly on the homepage. See D8 for why the copy was NOT rewritten to imply more heritage than exists. | — |
-| Q14 | **Bangla spelling of the workshop location** (Monipuripara, Tejgaon, Dhaka) | Used in the Bangla locale only. Standard place names, but §22 rules out guessing — asked rather than transliterated. | No — blocks bilingual launch only |
+| ~~Q14~~ | ~~Bangla workshop address~~ | **ANSWERED 2026-09-08: মনিপুরিপাড়া, তেজগাঁও, ঢাকা - ১২১৫** | — |
+| Q15 | **Transactional email provider** — Resend or Postmark? | §10.2 requires a real provider plus SPF/DKIM/DMARC on the domain, or order confirmations land in spam and customers assume the site is a scam. Orders currently place successfully but send no email. | Yes — blocks launch |
+| Q16 | **SMS gateway** (Bangladesh) | §10.3: local customers respond to SMS far more than email. Minimum is order confirmation and shipped-with-tracking. | No — blocks launch |
 
 ---
 
