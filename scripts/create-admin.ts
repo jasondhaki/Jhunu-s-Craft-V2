@@ -16,7 +16,7 @@ import 'dotenv/config';
 import { createInterface } from 'node:readline';
 import { PrismaClient, AdminRole } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { hash } from '@node-rs/argon2';
+import { hashPassword } from '../src/lib/password';
 
 const connectionString =
   process.env.DIRECT_DATABASE_URL ?? process.env.DATABASE_URL;
@@ -24,14 +24,9 @@ if (!connectionString) throw new Error('DATABASE_URL is not set');
 
 const db = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
 
-// MUST match ARGON_OPTIONS in src/lib/admin-auth.ts, or a hash created here
-// will not verify at login. algorithm 2 = Argon2id (§13.2).
-const ARGON_OPTIONS = {
-  algorithm: 2, // Argon2id — see note above
-  memoryCost: 19456,
-  timeCost: 2,
-  parallelism: 1,
-} as const;
+// Parameters come from src/lib/password.ts, so a hash created here is
+// guaranteed to verify at login — previously this was three copies kept in
+// sync by a comment.
 
 /**
  * Reads every line of stdin up front when stdin is NOT a terminal.
@@ -123,7 +118,7 @@ async function main() {
     process.exit(1);
   }
 
-  const passwordHash = await hash(password, ARGON_OPTIONS);
+  const passwordHash = await hashPassword(password);
 
   const user = await db.adminUser.upsert({
     where: { email },

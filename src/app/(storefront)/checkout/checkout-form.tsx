@@ -194,10 +194,18 @@ export function CheckoutForm({ subtotalFormatted, defaultCountry }: Props) {
 
       {/* ================= Step 1 — Contact (§6.5) ================= */}
       <Section step={1} title="Contact">
-        {/* §6.5, §28 — guest is the default. No account wall. */}
+        {/* §6.5, §28 — guest is the default. No account wall, ever. The
+            log-in link is an offer, not a gate. */}
         <p className="text-muted mb-4 text-sm">
           No account needed. We only use these to send your order confirmation
-          and so the courier can reach you.
+          and so the courier can reach you.{' '}
+          <Link
+            href="/login"
+            className="text-jute-deep underline underline-offset-4 hover:no-underline"
+          >
+            Already have an account? Log in
+          </Link>
+          .
         </p>
 
         <Field

@@ -3,7 +3,7 @@ import 'server-only';
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { hash as argonHash, verify as argonVerify } from '@node-rs/argon2';
+import { hashPassword, verifyPassword, DUMMY_HASH } from '@/lib/password';
 import type { AdminRole, AdminUser } from '@prisma/client';
 import { db } from '@/lib/db';
 
@@ -46,45 +46,10 @@ export const ADMIN_2FA_ENFORCED = false;
 // Passwords
 // ---------------------------------------------------------------------------
 
-/**
- * Argon2id parameters.
- *
- * 19 MiB / t=2 / p=1 is the OWASP-recommended baseline and runs comfortably
- * inside a serverless function's memory budget.
- *
- * `algorithm: 2` is Argon2id. The library exports `Algorithm` as an ambient
- * `const enum`, which has no runtime representation and cannot be imported
- * under TypeScript's `isolatedModules` — the mode Next.js builds in. The
- * numeric literal is pinned here rather than omitted, because §13.2 names
- * Argon2id specifically and a silent default is not something a security
- * parameter should rely on.
- *
- * MUST stay identical in scripts/create-admin.ts, or hashes created by the
- * script will not verify at login.
- */
-const ARGON_OPTIONS = {
-  algorithm: 2, // Argon2id — see note above
-  memoryCost: 19456,
-  timeCost: 2,
-  parallelism: 1,
-} as const;
+// Argon2 parameters live in src/lib/password.ts — one definition shared by
+// the admin panel, the storefront, and scripts/create-admin.ts.
 
-export function hashPassword(password: string): Promise<string> {
-  return argonHash(password, ARGON_OPTIONS);
-}
-
-export async function verifyPassword(
-  storedHash: string,
-  password: string,
-): Promise<boolean> {
-  try {
-    return await argonVerify(storedHash, password, ARGON_OPTIONS);
-  } catch {
-    // A malformed hash must read as "wrong password", never as an error the
-    // caller might treat as success.
-    return false;
-  }
-}
+export { hashPassword, verifyPassword };
 
 // ---------------------------------------------------------------------------
 // Session tokens
@@ -287,9 +252,7 @@ export async function attemptLogin(
 
   // Hash even when the user does not exist, so the response time does not
   // reveal whether the account is real (§13.2).
-  const storedHash =
-    user?.passwordHash ??
-    '$argon2id$v=19$m=19456,t=2,p=1$c29tZXNhbHRzb21lc2FsdA$0000000000000000000000000000000000000000000';
+  const storedHash = user?.passwordHash ?? DUMMY_HASH;
 
   const passwordOk = await verifyPassword(storedHash, password);
 

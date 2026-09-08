@@ -78,13 +78,13 @@ export function SiteHeader() {
           >
             <Search className="size-5" aria-hidden="true" />
           </Button>
-          <Button
-            variant="icon"
-            aria-label="Account"
-            className="text-paper hover:bg-forest-soft active:bg-forest-soft hidden sm:inline-flex"
+          <Link
+            href="/account"
+            aria-label="Your account"
+            className="text-paper hover:bg-forest-soft tap-target hidden items-center justify-center rounded-full transition-colors duration-150 sm:inline-flex"
           >
             <User className="size-5" aria-hidden="true" />
-          </Button>
+          </Link>
           <Button
             variant="icon"
             aria-label="Wishlist"

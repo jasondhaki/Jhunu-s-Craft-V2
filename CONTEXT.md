@@ -233,6 +233,18 @@ Newest last. Every action Claude takes on this project is recorded here.
 | 73 | Tested email properly | 18 checks including: money renders from minor units (৳2,910 from 291000 poisha), the tracking link uses the unguessable token not the order number, no opt-out link in transactional mail (§10.2), and **product names are HTML-escaped** so catalog data cannot inject markup (§13.4). One genuine finding: my own HTML comment contained the word "unsubscribe" and was shipping in every email — moved out of the markup. Finished with a real send, delivered. |
 | 74 | Set email env vars on Vercel | `RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_REPLY_TO` across production/preview/development. |
 
+### 2026-09-08 — Session 1, Phase 3 (accounts, no external dependency)
+
+| # | Action | Detail |
+|---|---|---|
+| 75 | Built customer authentication | `customer-auth.ts`, deliberately separate from `admin-auth.ts` — a customer session and an admin session are different credentials with different blast radii, and one must never satisfy a check meant for the other (§13.3). 30-day customer sessions vs the admin's 8 hours. |
+| 76 | Implemented the HIBP breach check | §13.2 asks for it explicitly. Uses the k-anonymity range API, so only the first five characters of the SHA-1 leave the server. **Fails open** — a third party being down is not a reason to block a sale. Verified working: `password123` is rejected. |
+| 77 | Built the account area | Register, log in, forgot/reset password, email verification, overview, order list, order detail, saved addresses, profile. Guest checkout is untouched — §6.5 and §28 forbid an account wall, and the log-in link on checkout is an offer, not a gate. |
+| 78 | Built guest order tracking (§6.9) | Order number **plus** email or phone, or the unguessable token from the confirmation email. An order number alone is never sufficient: they are sequential by design so a customer can read one out over the phone, which makes them guessable. Rate-limited per IP so it cannot be walked. |
+| 79 | Built GDPR account deletion (§13.8, §6.7) | Anonymises rather than deletes: orders are unlinked and the personal fields scrubbed, so historical invoices survive as accounting records without a person attached. §5.5 requires those records to stay intact. |
+| 80 | **Refactored the Argon2 parameters into one module** | They had been copy-pasted into three files with a comment asking future edits to keep them in sync — which is not a mechanism. Now `src/lib/password.ts` is the single definition. It also has no Next.js import, which is what makes the crypto testable outside a request context at all. Verified the existing admin password still verifies after the move. |
+| 81 | **Tested the IDOR surface directly** | 20 checks that actively attempt the attack: reading another customer's order by id, using an order number with no proof, using a wrong email, using a *valid token from a different order*. All refused. §13.3 calls IDOR "the most common serious flaw in small ecommerce sites", so these are assertions rather than assumptions. |
+
 ---
 
 ## 4. Build progress against §27
@@ -242,7 +254,7 @@ Newest last. Every action Claude takes on this project is recorded here.
 | **0 — Foundations** | Repo, tooling, design tokens, component skeleton, DB schema, staging | **Mostly done** — repo, tooling, tokens, schema, money/config libs, header/footer/homepage all built and building clean. Remaining: staging environment, and the rest of the §2.9 primitives. |
 | **1 — Catalog** | Product model, admin CRUD, image pipeline, home, category, PDP, search, filters | **Done** — seed catalog, home, /shop, categories, PDP, filters, sort, pagination, admin auth + dashboard + product CRUD + stock editing. Remaining: image upload pipeline, storefront search. |
 | **2 — Commerce** | Cart, guest checkout, COD, order creation, confirmation email, admin orders | **Mostly done** — cart, guest checkout, COD, order creation, confirmation page, admin order management, order state machine. Remaining: transactional email (§10) and SMS (§10.3), both blocked on a provider account. |
-| **3 — Payments & accounts** | Gateway + webhooks, accounts, order history, guest tracking, wishlist, emails | Not started |
+| **3 — Payments & accounts** | Gateway + webhooks, accounts, order history, guest tracking, wishlist, emails | **Partly done** — customer accounts, order history, guest order tracking, saved addresses, GDPR account deletion, and transactional email are built and tested. Remaining: the payment gateway and its webhooks (blocked on §8.2 / Q7), wishlist, and TOTP for admin (R2). |
 | **4 — Trust & content** | Reviews, content + policy pages, FAQ, SEO, structured data, analytics | Not started |
 | **5 — Polish & launch** | Performance, a11y, cross-device QA, security review, real payment test | Not started |
 

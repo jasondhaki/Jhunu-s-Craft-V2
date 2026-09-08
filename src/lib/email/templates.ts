@@ -358,3 +358,131 @@ ${siteConfig.name}`;
     text,
   };
 }
+
+/**
+ * Email verification — §10.1 "Account created: welcome + verify email".
+ * Link expires in 24 hours.
+ */
+export function verifyEmailEmail(params: {
+  to: string;
+  firstName: string | null;
+  token: string;
+}): EmailMessage {
+  const url = `${siteConfig.url}/verify-email/${encodeURIComponent(params.token)}`;
+  const greeting = params.firstName ? `Hello ${params.firstName},` : 'Hello,';
+
+  const body = `
+    <p style="margin:0 0 16px;font-size:14px;line-height:1.6;">${esc(greeting)}</p>
+    <p style="margin:0 0 20px;font-size:14px;line-height:1.6;">
+      Please confirm this email address so we can send you order updates.
+      This link works for 24 hours.
+    </p>
+    <p style="margin:0 0 20px;">
+      <a href="${esc(url)}" style="display:inline-block;background:${JUTE_DEEP};color:#ffffff;text-decoration:none;padding:12px 22px;border-radius:4px;font-size:14px;font-weight:500;">Confirm my email</a>
+    </p>
+    <p style="margin:0;font-size:13px;line-height:1.6;color:${MUTED};">
+      If you did not create an account, you can ignore this email — nothing will happen.
+    </p>`;
+
+  const text = `${greeting}
+
+Please confirm this email address so we can send you order updates.
+This link works for 24 hours.
+
+${url}
+
+If you did not create an account, you can ignore this email — nothing will happen.
+
+${siteConfig.name}`;
+
+  return {
+    to: params.to,
+    subject: `Confirm your email — ${siteConfig.name}`,
+    html: layout({
+      preheader: 'Confirm your email address so we can send you order updates.',
+      heading: 'Confirm your email',
+      body,
+    }),
+    text,
+  };
+}
+
+/**
+ * Password reset — §10.1. Expires in 1 hour, single use (§13.2).
+ */
+export function passwordResetEmail(params: {
+  to: string;
+  token: string;
+}): EmailMessage {
+  const url = `${siteConfig.url}/reset-password/${encodeURIComponent(params.token)}`;
+
+  const body = `
+    <p style="margin:0 0 20px;font-size:14px;line-height:1.6;">
+      Someone asked to reset the password for this account. If that was you,
+      use the button below. The link works once and expires in one hour.
+    </p>
+    <p style="margin:0 0 20px;">
+      <a href="${esc(url)}" style="display:inline-block;background:${JUTE_DEEP};color:#ffffff;text-decoration:none;padding:12px 22px;border-radius:4px;font-size:14px;font-weight:500;">Set a new password</a>
+    </p>
+    <p style="margin:0;font-size:13px;line-height:1.6;color:${MUTED};">
+      If it was not you, ignore this email — your password has not changed and
+      nobody can use this link without your inbox.
+    </p>`;
+
+  const text = `Someone asked to reset the password for this account.
+
+If that was you, open the link below. It works once and expires in one hour.
+
+${url}
+
+If it was not you, ignore this email — your password has not changed.
+
+${siteConfig.name}`;
+
+  return {
+    to: params.to,
+    subject: `Reset your password — ${siteConfig.name}`,
+    html: layout({
+      preheader: 'A link to set a new password. It expires in one hour.',
+      heading: 'Reset your password',
+      body,
+    }),
+    text,
+  };
+}
+
+/**
+ * Password changed — §10.1 "Password changed: security notification".
+ *
+ * Sent AFTER the fact, so someone whose account was taken over finds out.
+ */
+export function passwordChangedEmail(params: { to: string }): EmailMessage {
+  const body = `
+    <p style="margin:0 0 16px;font-size:14px;line-height:1.6;">
+      The password for your account was just changed, and you have been signed
+      out everywhere else.
+    </p>
+    <p style="margin:0;font-size:14px;line-height:1.6;color:${MUTED};">
+      If this was not you, call us on
+      <a href="tel:${esc(siteConfig.contact.phone)}" style="color:${JUTE_DEEP};">${esc(siteConfig.contact.phoneDisplay)}</a>
+      straight away.
+    </p>`;
+
+  const text = `The password for your account was just changed, and you have been
+signed out everywhere else.
+
+If this was not you, call us on ${siteConfig.contact.phoneDisplay} straight away.
+
+${siteConfig.name}`;
+
+  return {
+    to: params.to,
+    subject: `Your password was changed — ${siteConfig.name}`,
+    html: layout({
+      preheader: 'Your password was changed. If this was not you, contact us.',
+      heading: 'Password changed',
+      body,
+    }),
+    text,
+  };
+}
