@@ -31,6 +31,8 @@ Standing risks that are accepted *for now* and must not reach production unresol
 | **R3** | **Replace every placeholder photograph.** | §28: stock or borrowed images are "instantly detectable, instantly fatal to trust". All 144 image records currently point at `photo-pending.svg`. | Blocked on Q6. |
 | **R4** | **Replace the temporary admin password.** | Generated during setup and shown in a chat transcript. | Run `npm run admin:create`. |
 | **R5** | **Legal review of the policy pages.** | §15 — a Bangladeshi lawyer should review the terms and refund policy before launch. | Phase 4. |
+| **R6** | **Verify a sending domain in Resend, with SPF/DKIM/DMARC.** | Until then Resend permits only its sandbox sender (`onboarding@resend.dev`) and delivers **only to the account owner's own address** — so a real customer receives no confirmation at all. §10.2: without correct DNS "your confirmations will land in spam and customers will assume you're a scam." This is a DNS task, not a code task; the code is done and tested. | **Blocked on a domain (Q4), deferred by owner.** |
+| **R7** | **Rotate the Resend API key.** | It was briefly pasted into `.env.example`, which is a tracked file, and appears in this session's transcript. It was caught before any commit and **never reached git history or GitHub** — verified with `git log -S`. Lower urgency than R1 because the key is sandbox-scoped until R6 is done, but it should still be rotated once the domain is live. | Deferred. |
 
 ---
 
@@ -225,6 +227,11 @@ Newest last. Every action Claude takes on this project is recorded here.
 | 67 | **Found a real bug: cookies are not URL-decoded** | Next.js returns the stored cookie value as-is. `parseCartCookie` was calling `JSON.parse` on percent-encoded text, throwing, and the untrusted-input `catch` swallowed it into an empty cart. Fixed by decoding first. Noted because the silent catch is exactly the failure mode that hid it. |
 | 68 | **Found a second real bug: `'use client'` exports become client references** | `CART_COOKIE` was exported from `cart-store.ts`, which carries `'use client'`. Importing it into a Server Component yielded a proxy, not the string, so `cookies().get()` silently missed and checkout bounced to /cart with a full basket. Moved to `src/lib/cart-cookie.ts`, a neutral module. Nothing threw in either case — both bugs only surfaced because the e2e test asserted on rendered content. |
 | 69 | Added a test suite | `npm run test` → 29 checks across orders and shipping. Uses `tsx --conditions=react-server` so `server-only`-guarded modules resolve to their no-op build outside Next, keeping the guard intact in the app. |
+| 70 | **Caught a live secret in a tracked file** | The Resend key was pasted into `.env.example`, which IS committed. Verified with `git log -S` that it never reached history or GitHub, restored the file from git, and moved the key into `.env` (gitignored). It had also been added under the wrong name — `SENDER_API_KEY` rather than `RESEND_API_KEY` — so nothing was reading it. Logged as **R7**. |
+| 71 | Built the email layer (§10) | `send.ts` (Resend transport that never throws), `templates.ts` (branded HTML **and** plain-text fallback per §10.2, inline-styled tables because Outlook has no flexbox), `notify.ts` (one place mapping a status change to its email). Confirmation, shipped-with-tracking, and cancelled-with-refund-timeline. |
+| 72 | Wired notifications into the state machine | `transitionOrder` notifies last, once the database has settled, so a mail failure can never roll back a transition that already returned stock. Order placement awaits the confirmation rather than firing-and-forgetting — a Vercel function can freeze the moment it responds, so a dangling promise may simply never run. |
+| 73 | Tested email properly | 18 checks including: money renders from minor units (৳2,910 from 291000 poisha), the tracking link uses the unguessable token not the order number, no opt-out link in transactional mail (§10.2), and **product names are HTML-escaped** so catalog data cannot inject markup (§13.4). One genuine finding: my own HTML comment contained the word "unsubscribe" and was shipping in every email — moved out of the markup. Finished with a real send, delivered. |
+| 74 | Set email env vars on Vercel | `RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_REPLY_TO` across production/preview/development. |
 
 ---
 
@@ -252,7 +259,7 @@ Blocking items are marked. Unblocked ones are being built around with clearly-ma
 | ~~Q1~~ | ~~The maker's name~~ | **ANSWERED 2026-09-08: James Dilip Dhaki.** Wired into `site-config.ts`. | — |
 | Q2 | **Brand name spelling** — logo says "Jhunu's Craft**s**", repo says "Jhunu-s-Craft-V2" | Affects title tags, `Organization` schema, footer copyright, emails. Using **"Jhunu's Crafts"** (matching the logo) until told otherwise. | No |
 | ~~Q3~~ | ~~Phone and address~~ | **ANSWERED 2026-09-08:** +880 1730 431932 · Monipuripara, Tejgaon, Dhaka - 1215. WhatsApp split out to Q12. | — |
-| Q4 | **Domain name** | §24. Needed for SPF/DKIM/DMARC, canonical URLs, `orders@` sender. Live on `jhunus-crafts.vercel.app` meanwhile. | No — blocks email deliverability |
+| Q4 | **Domain name** | §24. Needed for SPF/DKIM/DMARC, canonical URLs, and a real sender address. **Deferred by owner 2026-09-08.** Now the single biggest blocker: without it, order confirmations reach nobody except the Resend account owner — see **R6**. Running on the `.vercel.app` URL meanwhile. | **Deferred — blocks customer email** |
 | Q5 | **Social links** (Facebook, Instagram, Pinterest) | Footer, `sameAs` in `Organization` schema. §14.1: a dead social link is worse than none, so unfilled entries render nothing. | No |
 | Q6 | **Real product photos** | §21 — "will make or break this site more than any code decision". §28: stock photos are instantly fatal to trust. Photo slots are marked placeholders, never stock imagery. | No — blocks launch |
 | Q7 | **Payment gateway account** — SSLCommerz / aamarPay / ShurjoPay? | §8.1. Determines the first `PaymentProvider` adapter. COD works without it. | No — blocks Phase 3 |
@@ -263,8 +270,8 @@ Blocking items are marked. Unblocked ones are being built around with clearly-ma
 | ~~Q12~~ | ~~WhatsApp number~~ | **ANSWERED 2026-09-08: same as the phone line.** Floating click-to-chat button now live (§14.1), dismissible per §14.5. | — |
 | ~~Q13~~ | ~~How long he has been making bags~~ | **ANSWERED 2026-09-08: 3 years.** Stated plainly on the homepage. See D8 for why the copy was NOT rewritten to imply more heritage than exists. | — |
 | ~~Q14~~ | ~~Bangla workshop address~~ | **ANSWERED 2026-09-08: মনিপুরিপাড়া, তেজগাঁও, ঢাকা - ১২১৫** | — |
-| Q15 | **Transactional email provider** — Resend or Postmark? | §10.2 requires a real provider plus SPF/DKIM/DMARC on the domain, or order confirmations land in spam and customers assume the site is a scam. Orders currently place successfully but send no email. | Yes — blocks launch |
-| Q16 | **SMS gateway** (Bangladesh) | §10.3: local customers respond to SMS far more than email. Minimum is order confirmation and shipped-with-tracking. | No — blocks launch |
+| ~~Q15~~ | ~~Transactional email provider~~ | **ANSWERED 2026-09-08: Resend.** Key configured locally and in all three Vercel environments. A real confirmation email was sent and delivered during testing. Deliverability to real customers still needs a verified domain — tracked as **R6**. | — |
+| Q16 | **SMS gateway** (Bangladesh) | §10.3: local customers respond to SMS far more than email. Minimum is order confirmation and shipped-with-tracking. **Deferred by owner 2026-09-08.** Notification code is structured so adding an SMS transport is a new module beside the email one, not a rewrite. | **Deferred** |
 
 ---
 

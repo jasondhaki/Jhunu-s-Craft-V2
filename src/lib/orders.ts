@@ -5,6 +5,7 @@ import { OrderStatus, PaymentStatus, PaymentMethod, Prisma } from '@prisma/clien
 import { db } from '@/lib/db';
 import { decrementStock, incrementStock, InsufficientStockError } from '@/lib/inventory';
 import { addMoney, multiplyMoney, type Currency, type Minor } from '@/lib/money';
+import { notifyStatusChange } from '@/lib/email/notify';
 
 /**
  * Orders — plan §5.4, §5.5, §9.4.
@@ -134,6 +135,11 @@ export async function transitionOrder(params: {
       });
     }
   }
+
+  // Tell the customer LAST, once the database has settled. A mail failure
+  // must never roll back a transition that has already returned stock — the
+  // notifier logs and swallows rather than throwing (§14.4).
+  await notifyStatusChange(order.id, params.to, params.note);
 }
 
 // ---------------------------------------------------------------------------

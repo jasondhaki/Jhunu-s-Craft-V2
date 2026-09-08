@@ -10,6 +10,7 @@ import { quoteShipping, codAvailable, dutiesApply } from '@/lib/shipping';
 import { codEligibility } from '@/lib/payments/cod';
 import { createOrder, InsufficientStockError, PriceMismatchError } from '@/lib/orders';
 import { formatMoney } from '@/lib/money';
+import { notifyOrderPlaced } from '@/lib/email/notify';
 
 /**
  * Checkout server actions — plan §6.5, §8.3, §13.4.
@@ -274,6 +275,14 @@ export async function placeOrderAction(
     // success page, so a back-button press cannot resubmit a full cart
     // (§23.3, "back button after order placement must not re-submit").
     jar.delete(CART_COOKIE);
+
+    // §14.4 — "Confirmation email within seconds of ordering."
+    //
+    // Awaited rather than fired-and-forgotten: on Vercel a serverless
+    // function can be frozen the moment its response is returned, so a
+    // dangling promise may simply never run. `notifyOrderPlaced` never
+    // throws, so this costs a little latency and cannot cost an order.
+    await notifyOrderPlaced(order.id);
 
     return {
       ok: true,
