@@ -260,6 +260,16 @@ Newest last. Every action Claude takes on this project is recorded here.
 | 90 | 404 and 500 pages (§7.3, §25) | Real copy, real routes out. The 500 page carries the phone number and tells anyone mid-order to call before retrying, so a broken site cannot cause a double charge. |
 | 91 | Declined to embed a map | §6.9 asks for one on /contact, but a Google Maps iframe sets third-party cookies before consent, which §13.8 forbids. Linked out instead — same usefulness, no violation. |
 
+### 2026-09-08 — Session 1, Phase 5 (security hardening)
+
+| # | Action | Detail |
+|---|---|---|
+| 92 | **Set every §13.1 security header** | None were set at all. Now: HSTS (with `preload`), `nosniff`, `X-Frame-Options: DENY` + `frame-ancestors 'none'`, `Referrer-Policy`, a `Permissions-Policy` denying camera/mic/geolocation/payment, COOP, and `X-Robots-Tag: noindex` on /admin and /account. `poweredByHeader` off. All verified live. |
+| 93 | Nonce-based CSP in middleware | The policy needs a fresh nonce per request, which a static config header cannot produce, so it lives in `src/middleware.ts`. **Zero scripts without a nonce, and no `unsafe-inline` in `script-src`** — verified on three page types. |
+| 94 | Documented the one CSP compromise | `style-src` keeps `unsafe-inline`, because React writes inline `style` attributes for dynamic values (the free-shipping progress bar, colour swatches) and a nonce cannot cover a style attribute. The exposure is CSS injection, not script execution. Written into the middleware rather than left silent. |
+| 95 | **Caught silently-broken structured data** | A strict `script-src` gates *every* `<script>` element, including `type="application/ld+json"` which the browser never executes. All our JSON-LD would have been blocked — and the failure is invisible: the page renders perfectly and Google simply sees nothing. Routed all four schema emitters plus the product page through one `<JsonLd>` component that attaches the nonce. |
+| 96 | Accepted a cost, and said so | Reading `headers()` for the nonce opts content and policy pages out of static generation. Accepted because D7 already records the storefront as per-request for currency detection, these pages are cheap, and silently-dropped structured data defeats the point of writing it. Flagged in `json-ld.tsx` as something to revisit alongside D7. |
+
 ---
 
 ## 4. Build progress against §27
