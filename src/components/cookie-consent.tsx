@@ -2,6 +2,14 @@
 
 import { useSyncExternalStore, useState } from 'react';
 import Link from 'next/link';
+import {
+  readConsent,
+  serverConsentSnapshot,
+  subscribeToConsent,
+  writeConsent,
+  clearConsent,
+  type ConsentState,
+} from '@/lib/consent-store';
 
 /**
  * Cookie consent — plan §13.8 and §18.1.
@@ -9,90 +17,41 @@ import Link from 'next/link';
  * §13.8: "Cookie consent banner with GRANULAR choices (necessary / analytics
  * / marketing) and no non-essential scripts firing before consent. Required
  * for EU visitors, and you will have EU visitors."
- * §18.1: "All analytics load only after consent for non-essential cookies."
  *
  * The design decisions that matter here, and why:
  *
- *  - **Reject is as easy as accept.** Both are real buttons of equal weight
- *    on the first screen. A banner where refusing takes an extra click is a
- *    dark pattern (§14.5) and is non-compliant in the EU.
- *  - **Nothing is pre-ticked.** Analytics and marketing default to OFF, and
- *    stay off until someone actively turns them on.
- *  - **No scripts load before a choice.** Consent is not merely recorded —
- *    it gates whether the tags mount at all. See `<Analytics>`.
- *  - Necessary cookies (session, cart, currency) are not offered as a choice
- *    because the site cannot function without them, and pretending otherwise
+ *  - **Reject is as easy as accept.** Both are real buttons of equal weight on
+ *    the first screen. A banner where refusing takes an extra click is a dark
+ *    pattern (§14.5) and is non-compliant in the EU.
+ *  - **Nothing is pre-ticked.** Analytics and marketing default to OFF.
+ *  - **No scripts load before a choice.** Consent is not merely recorded — it
+ *    gates whether the tags mount at all. See `<Analytics>`.
+ *  - Necessary cookies (session, cart, currency) are not offered as a choice,
+ *    because the site cannot function without them and pretending otherwise
  *    would be dishonest.
+ *
+ * All the state logic lives in `@/lib/consent-store` so it can be tested
+ * outside a renderer — see the header comment there for the crash that
+ * motivated splitting it out.
  */
 
-const CONSENT_KEY = 'jc_cookie_consent';
-const CONSENT_EVENT = 'jc:consent-changed';
-
-export interface ConsentState {
-  necessary: true;
-  analytics: boolean;
-  marketing: boolean;
-  /** ISO timestamp — consent has to be renewable and auditable. */
-  decidedAt: string;
-}
-
-function readConsent(): ConsentState | null {
-  try {
-    const raw = localStorage.getItem(CONSENT_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as ConsentState;
-    if (typeof parsed?.analytics !== 'boolean') return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-function writeConsent(analytics: boolean, marketing: boolean): void {
-  const state: ConsentState = {
-    necessary: true,
-    analytics,
-    marketing,
-    decidedAt: new Date().toISOString(),
-  };
-  try {
-    localStorage.setItem(CONSENT_KEY, JSON.stringify(state));
-  } catch {
-    // Blocked storage — the banner will simply ask again next visit, which
-    // is the safe direction to fail.
-  }
-  window.dispatchEvent(new Event(CONSENT_EVENT));
-}
-
-function subscribe(onChange: () => void): () => void {
-  window.addEventListener(CONSENT_EVENT, onChange);
-  window.addEventListener('storage', onChange);
-  return () => {
-    window.removeEventListener(CONSENT_EVENT, onChange);
-    window.removeEventListener('storage', onChange);
-  };
-}
+export type { ConsentState };
 
 /**
  * Reads the current consent. Returns null on the server and before hydration,
- * so nothing gated can ever render during SSR — which is exactly the point.
+ * so nothing gated can render during SSR — which is the point.
  */
 export function useConsent(): ConsentState | null {
   return useSyncExternalStore(
-    subscribe,
+    subscribeToConsent,
     readConsent,
-    () => null, // server snapshot: no consent known, so nothing loads
+    serverConsentSnapshot,
   );
 }
 
 /** Lets the cookie policy page reopen the chooser (§15.3). */
 export function openConsentSettings(): void {
-  try {
-    localStorage.removeItem(CONSENT_KEY);
-  } catch {
-    /* ignore */
-  }
-  window.dispatchEvent(new Event(CONSENT_EVENT));
+  clearConsent();
 }
 
 export function CookieConsent() {
@@ -106,8 +65,8 @@ export function CookieConsent() {
 
   return (
     <div
-      // §20 — a dialog that does not trap focus would be worse than this;
-      // it is a non-modal region announced politely, and the page stays usable.
+      // §20 — a non-modal region rather than a focus-trapping dialog, so the
+      // page stays usable while the choice is pending.
       role="region"
       aria-label="Cookie choices"
       className="border-line bg-paper fixed inset-x-0 bottom-0 z-50 border-t shadow-lg print:hidden"

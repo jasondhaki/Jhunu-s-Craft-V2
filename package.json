@@ -20,11 +20,12 @@
     "admin:create": "tsx scripts/create-admin.ts",
     "test:orders": "tsx --conditions=react-server scripts/test-concurrency.ts",
     "test:shipping": "tsx --conditions=react-server scripts/test-shipping.ts",
-    "test": "npm run test:orders && npm run test:shipping && npm run test:email && npm run test:accounts && npm run test:reviews",
+    "test": "npm run test:orders && npm run test:shipping && npm run test:email && npm run test:accounts && npm run test:reviews && npm run test:consent",
     "test:email": "tsx --conditions=react-server scripts/test-email.ts",
     "test:accounts": "tsx --conditions=react-server scripts/test-accounts.ts",
     "test:reviews": "tsx --conditions=react-server scripts/test-reviews.ts",
-    "db:seed:real": "tsx --conditions=react-server prisma/seed-real.ts"
+    "db:seed:real": "tsx --conditions=react-server prisma/seed-real.ts",
+    "test:consent": "tsx scripts/test-consent.ts"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.2.0",
